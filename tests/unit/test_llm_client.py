@@ -21,9 +21,10 @@ def test_perform_action_tool_enum_covers_all_commands():
     assert set(enum_values) == set(PETOI_COMMANDS.keys())
 
 
-def test_perform_action_tool_action_is_required():
+def test_perform_action_tool_spoken_text_is_required():
     required = PERFORM_ACTION_TOOL["function"]["parameters"]["required"]
-    assert "action" in required
+    assert "spoken_text" in required
+    assert "action" not in required
 
 
 def test_system_prompt_mentions_perform_action():
@@ -77,13 +78,22 @@ def test_openai_client_missing_api_key_raises(monkeypatch):
             OpenAILLMClient(model="gpt-5.4-nano", api_key=None)
 
 
-def _fake_client(content: str, tool_action: str | None = None) -> OpenAILLMClient:
+def _fake_client(
+    content: str,
+    tool_action: str | None = None,
+    tool_spoken_text: str | None = None,
+) -> OpenAILLMClient:
     message = MagicMock()
     message.content = content
-    if tool_action:
+    if tool_action or tool_spoken_text is not None:
         tc = MagicMock()
         tc.function.name = "perform_action"
-        tc.function.arguments = json.dumps({"action": tool_action})
+        args: dict = {}
+        if tool_action:
+            args["action"] = tool_action
+        if tool_spoken_text is not None:
+            args["spoken_text"] = tool_spoken_text
+        tc.function.arguments = json.dumps(args)
         message.tool_calls = [tc]
     else:
         message.tool_calls = None
@@ -133,6 +143,15 @@ def test_anthropic_complete_raises_not_implemented():
     client = AnthropicLLMClient.__new__(AnthropicLLMClient)
     with pytest.raises(NotImplementedError):
         client.complete([])
+
+
+def test_complete_action_with_no_content_uses_spoken_text_from_tool():
+    client = _fake_client(None, tool_action="hi", tool_spoken_text="Hi! I'm Tyapa!")
+    text, action = client.complete(
+        [{"role": "user", "content": "what's your name?"}], tools=[PERFORM_ACTION_TOOL]
+    )
+    assert text == "Hi! I'm Tyapa!"
+    assert action == "hi"
 
 
 def test_complete_ignores_unknown_tool_calls():

@@ -42,7 +42,7 @@ mic → Whisper STT → LLM → Kokoro TTS → speaker
 
 Pi OS Bookworm ships with Python 3.11, which is the required version.
 ```bash
-sudo apt install -y portaudio19-dev
+sudo apt install -y portaudio19-dev ffmpeg
 ```
 
 **macOS (for local development):**

@@ -27,19 +27,23 @@ PERFORM_ACTION_TOOL = {
     "function": {
         "name": "perform_action",
         "description": (
-            "Perform a physical action on the robot body. Use this to move, "
-            "do a trick, express an emotion, or react physically to the conversation."
+            "Speak and optionally perform a physical action on the robot body. "
+            "Always provide spoken_text. Use action to move, do a trick, or react physically."
         ),
         "parameters": {
             "type": "object",
             "properties": {
+                "spoken_text": {
+                    "type": "string",
+                    "description": "What Tyapa says aloud",
+                },
                 "action": {
                     "type": "string",
                     "enum": list(COMMANDS.keys()),
                     "description": "Skill key to execute on the robot",
-                }
+                },
             },
-            "required": ["action"],
+            "required": ["spoken_text"],
         },
     },
 }
@@ -82,6 +86,8 @@ class OpenAILLMClient(LLMClient):
                 if tool_call.function.name == "perform_action":
                     args = json.loads(tool_call.function.arguments)
                     action_key = args.get("action")
+                    if not response_text:
+                        response_text = args.get("spoken_text", "")
                     break
 
         return response_text, action_key
