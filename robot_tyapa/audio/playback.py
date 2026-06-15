@@ -3,6 +3,7 @@ import logging
 import subprocess
 import wave
 
+from robot_tyapa.audio import _suppress_stderr
 from robot_tyapa.config import PLAYBACK_DEVICE
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,8 @@ def _play_via_pyaudio(wav_bytes: bytes) -> None:
         framerate = wf.getframerate()
         nframes = wf.getnframes()
 
-        pa = pyaudio.PyAudio()
+        with _suppress_stderr():
+            pa = pyaudio.PyAudio()
         fmt = pa.get_format_from_width(sampwidth)
 
         # output_device_index=None -> system default -> respects /etc/asound.conf pcm.!default
