@@ -74,7 +74,6 @@ def capture_with_vad(
         input=True,
         input_device_index=device_index,
         frames_per_buffer=chunk_size,
-        exception_on_overflow=False,
     )
 
     try:
@@ -85,12 +84,12 @@ def capture_with_vad(
 
         # burn a few chunks to avoid capturing speaker echo
         for _ in range(skip_chunks):
-            stream.read(chunk_size, exception_on_overflow=False)
+            stream.read(chunk_size)
 
         logger.debug("VAD: listening (threshold=%d)", rms_threshold)
 
         while True:
-            chunk = stream.read(chunk_size, exception_on_overflow=False)
+            chunk = stream.read(chunk_size)
             energy = _rms(chunk)
 
             if not recording:
