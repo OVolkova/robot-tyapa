@@ -4,7 +4,7 @@ import wave
 
 import numpy as np
 
-from robot_tyapa.audio import _suppress_stderr
+# from robot_tyapa.audio import _suppress_stderr
 from robot_tyapa.config import (
     CHUNK_SIZE,
     RECORD_DEVICE,
@@ -61,8 +61,8 @@ def capture_with_vad(
     """Block until speech + trailing silence detected. Returns WAV bytes or None."""
     import pyaudio
 
-    with _suppress_stderr():
-        pa = pyaudio.PyAudio()
+    # with _suppress_stderr():
+    pa = pyaudio.PyAudio()
     device_index = _find_input_device(pa, device_name)
 
     silence_chunks_needed = int((silence_ms / 1000) * rate / chunk_size)
