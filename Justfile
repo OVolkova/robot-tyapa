@@ -7,10 +7,10 @@ install:
     uv sync --extra dev
 
 test:
-    uv run pytest -v --cov --cov-report=term-missing --ignore=tests/test_integration.py
+    uv run pytest tests/unit -v --cov --cov-report=term-missing
 
 test-integration:
-    uv run pytest tests/test_integration.py -v -s
+    uv run pytest tests/integration -v -s
 
 lint:
     uv run ruff check robot_tyapa/

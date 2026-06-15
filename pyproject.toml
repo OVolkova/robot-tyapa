@@ -41,7 +41,7 @@ show_missing = true
 fail_under = 90
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 
 [tool.ruff]
 line-length = 100

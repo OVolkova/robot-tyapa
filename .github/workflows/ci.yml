@@ -12,8 +12,8 @@ jobs:
         with:
           python-version: "3.14"
       - run: uv sync --extra dev
-      - run: uv run ruff check robot_tyapa/
-      - run: uv run ruff format --check robot_tyapa/
+      - run: uv run ruff check robot_tyapa/ tests/unit/ tests/integration/
+      - run: uv run ruff format --check robot_tyapa/ tests/unit/ tests/integration/
 
   test:
     runs-on: ubuntu-latest
@@ -23,7 +23,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.14"
+          enable-cache: true
       - name: Install dependencies
         run: uv sync --extra dev
       - name: Run tests with coverage
-        run: uv run pytest -v --cov --cov-report=term-missing
+        run: uv run pytest tests/unit -v --cov --cov-report=term-missing
