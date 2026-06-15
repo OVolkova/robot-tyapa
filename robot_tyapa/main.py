@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import logging
 
 from robot_tyapa.audio.capture import capture_with_vad
