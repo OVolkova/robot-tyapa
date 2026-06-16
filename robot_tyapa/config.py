@@ -29,7 +29,6 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER")  # None -> "openai" default
 LLM_MODEL = os.environ.get("LLM_MODEL")  # None -> gpt-5.4-nano default
 
 # Robot serial
-ROBOT_PORT = "/dev/serial0"  # symlink -> ttyAMA10 on Pi 5 Bookworm
 ROBOT_BAUD = 115200
 ROBOT_WAKE_DELAY_S = 0.5
 BRAIN_DEFAULT_ACTION = "balance"

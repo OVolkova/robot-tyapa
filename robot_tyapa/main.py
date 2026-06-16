@@ -14,8 +14,6 @@ from robot_tyapa.config import (
     LLM_PROVIDER,
     PLAYBACK_DEVICE,
     RECORD_DEVICE,
-    ROBOT_BAUD,
-    ROBOT_PORT,
     SAMPLE_RATE,
     STT_MODEL,
     TTS_LANG_CODE,
@@ -36,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    robot = PetoiController(port=ROBOT_PORT, baud=ROBOT_BAUD)
+    robot = PetoiController()
     robot.connect()
 
     logger.info("Loading models — this takes ~30s on first run...")
