@@ -4,7 +4,7 @@ import time
 import serial
 import serial.tools.list_ports
 
-from robot_tyapa.config import ROBOT_BAUD, ROBOT_WAKE_DELAY_S
+from robot_tyapa.config import BRAIN_DEFAULT_ACTION, ROBOT_BAUD, ROBOT_WAKE_DELAY_S
 from robot_tyapa.robot.base import RobotController
 from robot_tyapa.robot.petoi_commands import PETOI_COMMANDS
 
@@ -16,7 +16,7 @@ def find_petoi_port() -> str:
         try:
             port = serial.Serial(info.device, 115200, timeout=2)
             port.close()
-            logger.info("Found Petoi on %s", info.device)
+            logger.info("Found Petoi on %s %s", info.device, info.name)
             return info.device
         except serial.SerialException:
             continue
@@ -37,6 +37,7 @@ class PetoiController(RobotController):
         time.sleep(ROBOT_WAKE_DELAY_S)
         self.ser.reset_input_buffer()
         logger.info("Connected to Petoi on %s at %d baud", self.port, self.baud)
+        self.execute_action(BRAIN_DEFAULT_ACTION)
 
     def execute_action(self, action: str) -> None:
         if not self._is_open():

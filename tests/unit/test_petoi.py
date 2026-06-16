@@ -74,8 +74,10 @@ def test_connect_opens_port_and_wakes():
     ):
         controller.connect()
         MockSerial.assert_called_once_with("/dev/ttyFAKE", 115200, timeout=2)
-    mock_ser.write.assert_called_once_with(b"\n")
     mock_ser.reset_input_buffer.assert_called_once()
+    calls = [c.args[0] for c in mock_ser.write.call_args_list]
+    assert b"\n" in calls
+    assert b"kbalance\n" in calls
 
 
 def test_execute_valid_action_sends_command():
