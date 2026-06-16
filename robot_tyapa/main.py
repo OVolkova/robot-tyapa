@@ -21,8 +21,9 @@ from robot_tyapa.config import (
     TTS_VOICE,
     VAD_MAX_RECORD_S,
     VAD_MIN_SPEECH_S,
-    VAD_RMS_THRESHOLD,
+    VAD_NO_SPEECH_TIMEOUT_S,
     VAD_SILENCE_MS,
+    VAD_THRESHOLD,
 )
 from robot_tyapa.robot.petoi import PetoiController
 
@@ -56,10 +57,11 @@ def main() -> None:
                 device_name=RECORD_DEVICE,
                 rate=SAMPLE_RATE,
                 chunk_size=CHUNK_SIZE,
-                rms_threshold=VAD_RMS_THRESHOLD,
+                vad_threshold=VAD_THRESHOLD,
                 silence_ms=VAD_SILENCE_MS,
                 max_seconds=VAD_MAX_RECORD_S,
                 min_speech_seconds=VAD_MIN_SPEECH_S,
+                no_speech_timeout=VAD_NO_SPEECH_TIMEOUT_S,
             )
             if wav is None:
                 continue
