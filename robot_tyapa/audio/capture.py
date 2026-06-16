@@ -11,13 +11,26 @@ from robot_tyapa.config import (
     SAMPLE_RATE,
     VAD_MAX_RECORD_S,
     VAD_MIN_SPEECH_S,
-    VAD_RMS_THRESHOLD,
+    VAD_NO_SPEECH_TIMEOUT_S,
     VAD_SILENCE_MS,
+    VAD_THRESHOLD,
 )
 
 logger = logging.getLogger(__name__)
 
 _ECHO_SKIP_S = 0.3  # discard this many seconds after playback to avoid echo
+
+_vad_model = None
+
+
+def _get_vad_model():
+    global _vad_model
+    if _vad_model is None:
+        from silero_vad import load_silero_vad
+
+        logger.debug("Loading silero-vad model")
+        _vad_model = load_silero_vad()
+    return _vad_model
 
 
 def _rms(chunk_bytes: bytes) -> float:
@@ -53,21 +66,32 @@ def capture_with_vad(
     device_name: str = RECORD_DEVICE,
     rate: int = SAMPLE_RATE,
     chunk_size: int = CHUNK_SIZE,
-    rms_threshold: int = VAD_RMS_THRESHOLD,
+    vad_threshold: float = VAD_THRESHOLD,
     silence_ms: int = VAD_SILENCE_MS,
     max_seconds: float = VAD_MAX_RECORD_S,
     min_speech_seconds: float = VAD_MIN_SPEECH_S,
+    no_speech_timeout: float = VAD_NO_SPEECH_TIMEOUT_S,
 ) -> bytes | None:
     """Block until speech + trailing silence detected. Returns WAV bytes or None."""
     import pyaudio
+    import torch
+    from silero_vad import VADIterator
 
     with _suppress_stderr():
         pa = pyaudio.PyAudio()
     device_index = _find_input_device(pa, device_name)
 
-    silence_chunks_needed = int((silence_ms / 1000) * rate / chunk_size)
     max_chunks = int(max_seconds * rate / chunk_size)
+    no_speech_chunks = int(no_speech_timeout * rate / chunk_size)
     skip_chunks = int(_ECHO_SKIP_S * rate / chunk_size)
+
+    model = _get_vad_model()
+    vad_iter = VADIterator(
+        model,
+        threshold=vad_threshold,
+        sampling_rate=rate,
+        min_silence_duration_ms=silence_ms,
+    )
 
     stream = pa.open(
         format=pyaudio.paInt32,
@@ -81,38 +105,37 @@ def capture_with_vad(
     try:
         recording = False
         frames: list[bytes] = []
-        silence_count = 0
-        total_chunks = 0
+        pre_speech_chunks = 0
+        speech_chunks = 0
 
-        # burn a few chunks to avoid capturing speaker echo
         for _ in range(skip_chunks):
             stream.read(chunk_size)
 
-        logger.debug("VAD: listening (threshold=%d)", rms_threshold)
+        logger.debug("VAD: listening (silero, threshold=%.2f)", vad_threshold)
 
         while True:
             chunk = stream.read(chunk_size)
-            energy = _rms(chunk)
+            samples = np.frombuffer(chunk, dtype=np.int32).astype(np.float32) / (2**31)
+            event = vad_iter(torch.from_numpy(samples), return_seconds=False)
 
             if not recording:
-                if energy > rms_threshold:
+                pre_speech_chunks += 1
+                if event and "start" in event:
                     recording = True
-                    silence_count = 0
                     frames = [chunk]
-                    logger.debug("VAD: speech start (rms=%.0f)", energy)
+                    speech_chunks = 1
+                    logger.debug("VAD: speech start")
+                elif pre_speech_chunks >= no_speech_chunks:
+                    logger.debug("VAD: no speech timeout")
+                    return None
             else:
                 frames.append(chunk)
-                total_chunks += 1
+                speech_chunks += 1
 
-                if energy <= rms_threshold:
-                    silence_count += 1
-                else:
-                    silence_count = 0
-
-                if silence_count >= silence_chunks_needed:
+                if event and "end" in event:
                     logger.debug("VAD: speech end (silence)")
                     break
-                if total_chunks >= max_chunks:
+                if speech_chunks >= max_chunks:
                     logger.debug("VAD: max duration reached")
                     break
 
