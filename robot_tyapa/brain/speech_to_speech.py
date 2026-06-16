@@ -99,7 +99,6 @@ class TextToSpeech:
         self.pipeline = KPipeline(lang_code=lang_code)
 
     def generate(self, text):
-        logger.info("Generating speech for text: %s", text)
         generator = self.pipeline(
             text,
             voice=self.voice,
@@ -108,15 +107,11 @@ class TextToSpeech:
         )
 
         original_waveform = [a for _, _, a in generator][0]
-        logger.info(
-            "Original waveform shape: %s, freq: %d", original_waveform.shape, self.model_freq
-        )
         waveform = resample(
             original_waveform,
             original_freq=self.model_freq,
             target_freq=PLAYBACK_FREQUENCY,
         )
-        logger.info("Resampled waveform shape: %s, freq: %d", waveform.shape, PLAYBACK_FREQUENCY)
         return waveform, PLAYBACK_FREQUENCY
 
 
@@ -136,11 +131,7 @@ class SpeechToText:
         self.model_freq = model_freq
 
     def __call__(self, waveform, freq):
-        logger.info(
-            "STT input: shape=%s freq=%d model_freq=%d", waveform.shape, freq, self.model_freq
-        )
         waveform = resample(waveform, self.model_freq, freq)
-        logger.info("STT resampled: shape=%s", waveform.shape)
         processed = self.processor(
             waveform, sampling_rate=self.model_freq, return_tensors="pt", return_attention_mask=True
         )
