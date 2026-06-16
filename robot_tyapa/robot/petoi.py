@@ -2,21 +2,36 @@ import logging
 import time
 
 import serial
+import serial.tools.list_ports
 
-from robot_tyapa.config import ROBOT_BAUD, ROBOT_PORT, ROBOT_WAKE_DELAY_S
+from robot_tyapa.config import ROBOT_BAUD, ROBOT_WAKE_DELAY_S
 from robot_tyapa.robot.base import RobotController
 from robot_tyapa.robot.petoi_commands import PETOI_COMMANDS
 
 logger = logging.getLogger(__name__)
 
 
+def find_petoi_port() -> str:
+    for info in serial.tools.list_ports.comports():
+        try:
+            port = serial.Serial(info.device, 115200, timeout=2)
+            port.close()
+            logger.info("Found Petoi on %s", info.device)
+            return info.device
+        except serial.SerialException:
+            continue
+    raise RuntimeError("No Petoi port found")
+
+
 class PetoiController(RobotController):
-    def __init__(self, port: str = ROBOT_PORT, baud: int = ROBOT_BAUD) -> None:
+    def __init__(self, port: str | None = None, baud: int = ROBOT_BAUD) -> None:
         self.port = port
         self.baud = baud
         self.ser: serial.Serial | None = None
 
     def connect(self) -> None:
+        if self.port is None:
+            self.port = find_petoi_port()
         self.ser = serial.Serial(self.port, self.baud, timeout=2)
         self.ser.write(b"\n")
         time.sleep(ROBOT_WAKE_DELAY_S)

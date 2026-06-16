@@ -5,7 +5,7 @@ SAMPLE_RATE = 16000
 CHANNELS = 1
 CHUNK_SIZE = 1024
 RECORD_DEVICE = "mic_mono"  # ALSA alias defined in /etc/asound.conf
-PLAYBACK_DEVICE = "default"  # routes: softvol -> dmixer -> petoiaudio device 1
+PLAYBACK_DEVICE = "default"  # routes: softvol -> dmixer -> tyapaaudio device 1
 
 # VAD (Voice Activity Detection)
 VAD_RMS_THRESHOLD = 800  # raise if servo noise triggers false starts

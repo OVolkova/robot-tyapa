@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-from robot_tyapa.robot.petoi import PetoiController
+import pytest
+
+from robot_tyapa.robot.petoi import PetoiController, find_petoi_port
 
 
 def _connected_controller() -> PetoiController:
@@ -8,6 +10,58 @@ def _connected_controller() -> PetoiController:
     controller.ser = MagicMock()
     controller.ser.is_open = True
     return controller
+
+
+def _fake_port_info(device: str) -> MagicMock:
+    info = MagicMock()
+    info.device = device
+    return info
+
+
+def test_find_petoi_port_returns_device():
+    fake_ser = MagicMock()
+    with (
+        patch(
+            "robot_tyapa.robot.petoi.serial.tools.list_ports.comports",
+            return_value=[_fake_port_info("/dev/ttyUSB0")],
+        ),
+        patch("robot_tyapa.robot.petoi.serial.Serial", return_value=fake_ser),
+    ):
+        result = find_petoi_port()
+    assert result == "/dev/ttyUSB0"
+    fake_ser.close.assert_called_once()
+
+
+def test_find_petoi_port_raises_when_none_found():
+    import serial as _serial
+
+    with (
+        patch(
+            "robot_tyapa.robot.petoi.serial.tools.list_ports.comports",
+            return_value=[_fake_port_info("/dev/ttyUSB0")],
+        ),
+        patch(
+            "robot_tyapa.robot.petoi.serial.Serial",
+            side_effect=_serial.SerialException("no device"),
+        ),
+    ):
+        with pytest.raises(RuntimeError, match="No Petoi port found"):
+            find_petoi_port()
+
+
+def test_connect_autodiscovers_port():
+    controller = PetoiController()
+    assert controller.port is None
+    mock_ser = MagicMock()
+    mock_ser.is_open = True
+    with (
+        patch("robot_tyapa.robot.petoi.find_petoi_port", return_value="/dev/ttyUSB0") as mock_find,
+        patch("robot_tyapa.robot.petoi.serial.Serial", return_value=mock_ser),
+        patch("robot_tyapa.robot.petoi.time.sleep"),
+    ):
+        controller.connect()
+        mock_find.assert_called_once()
+    assert controller.port == "/dev/ttyUSB0"
 
 
 def test_connect_opens_port_and_wakes():
