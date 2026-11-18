@@ -1,0 +1,6 @@
+[Unit]
+Description=Tyapa robot dog (all services)
+Wants=tyapa@hearing.service tyapa@speech.service tyapa@brain.service tyapa@body.service
+
+[Install]
+WantedBy=multi-user.target

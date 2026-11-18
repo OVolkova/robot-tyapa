@@ -23,7 +23,12 @@ fi
 
 # ── project deps ──────────────────────────────────────────────────────────────
 echo "Installing project dependencies..."
-uv sync --extra dev
+(cd protocol && uv sync --extra dev)
+for s in hearing speech brain body; do
+    echo "── $s"
+    (cd "services/$s" && uv sync --extra dev)
+done
 
 echo ""
-echo "Done. Run 'just' to see available commands."
+echo "Done. Put LLM_PROVIDER / API key in services/brain/.env (never in git)."
+echo "Run 'just' to see available commands."
