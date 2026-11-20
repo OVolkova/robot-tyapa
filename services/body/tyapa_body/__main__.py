@@ -29,7 +29,7 @@ def is_gait(action: str) -> bool:
 
 
 def gait_limit(requested: float | None) -> float | None:
-    caps = [x for x in (requested, config.GAIT_MAX_S) if x]
+    caps = [x for x in (requested, config.GAIT_MAX_S) if x and x > 0]
     return min(caps) if caps else None
 
 
@@ -49,7 +49,7 @@ class Body:
         if config.DRY_RUN:
             self.robot = DryRunRobot()
         else:
-            from .petoi import PetoiController  # moved from robot_tyapa/robot/petoi.py
+            from .petoi import PetoiController
 
             self.robot = PetoiController()
         self.robot.connect()
@@ -79,6 +79,8 @@ class Body:
         return m.ok(**self._state())
 
     def on_raw(self, msg):
+        # Deliberately does not touch current/stop_at: raw joint moves are for
+        # tuning/debugging and leave any running gait and its watchdog alone.
         cmd = str(msg.get("cmd", "")).strip()
         if not RAW_OK.match(cmd):
             return m.error(f"raw command not allowed: {cmd!r}")

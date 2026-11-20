@@ -28,32 +28,39 @@ class Hearing:
     def capture_loop(self) -> None:
         events = Publisher(ep.bind_addr(ep.HEARING_EVENTS))
         while True:
-            if not self.listening.wait(timeout=1.0):
-                if time.monotonic() - self.last_cmd > config.TURN_TIMEOUT_S:
-                    log.warning("brain silent for %ss -- listening again", config.TURN_TIMEOUT_S)
-                    self.listening.set()
-                continue
-            wav = capture_with_vad()
-            if wav is None or not self.listening.is_set():
-                continue  # timeout, or we started speaking meanwhile
-            t_end = (
-                time.monotonic() - config.VAD_SILENCE_MS / 1000
-            )  # when you actually stopped talking
-            self.listening.clear()  # half-duplex: mic closed until the brain finishes the turn
-            self.last_cmd = time.monotonic()
-            utt = next(self.utt_ids)
-            events.publish("hearing", m.make("speech_ended", utt=utt, t_end=t_end))
-            t0 = time.monotonic()
-            text = self.models.transcribe(wav).strip()
-            stt_s = time.monotonic() - t0
-            if not text:
-                log.info("utt %d: empty transcript, ignored", utt)
+            try:
+                self._capture_once(events)
+            except Exception:
+                # never let this thread die: the service would still answer ping but be deaf
+                log.exception("capture failed -- retrying in 2s")
+                time.sleep(2)
                 self.listening.set()
-                continue
-            log.info("utt %d: heard %r (stt %.2fs)", utt, text, stt_s)
-            events.publish(
-                "hearing", m.make("heard", utt=utt, text=text, t_end=t_end, stt_s=round(stt_s, 3))
-            )
+
+    def _capture_once(self, events) -> None:
+        if not self.listening.wait(timeout=1.0):
+            if time.monotonic() - self.last_cmd > config.TURN_TIMEOUT_S:
+                log.warning("brain silent for %ss -- listening again", config.TURN_TIMEOUT_S)
+                self.listening.set()
+            return
+        wav = capture_with_vad()
+        if wav is None or not self.listening.is_set():
+            return  # timeout, or we started speaking meanwhile
+        t_end = time.monotonic() - config.VAD_SILENCE_MS / 1000  # when you actually stopped talking
+        self.listening.clear()  # half-duplex: mic closed until the brain finishes the turn
+        self.last_cmd = time.monotonic()
+        utt = next(self.utt_ids)
+        events.publish("hearing", m.make("speech_ended", utt=utt, t_end=t_end))
+        t0 = time.monotonic()
+        text = self.models.transcribe(wav).strip()
+        stt_s = time.monotonic() - t0
+        if not text:
+            log.info("utt %d: empty transcript, ignored", utt)
+            self.listening.set()
+            return
+        log.info("utt %d: heard %r (stt %.2fs)", utt, text, stt_s)
+        events.publish(
+            "hearing", m.make("heard", utt=utt, text=text, t_end=t_end, stt_s=round(stt_s, 3))
+        )
 
     # -- commands from the brain (main thread) --
     def on_listen(self, msg):

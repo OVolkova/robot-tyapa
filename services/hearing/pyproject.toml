@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.3.5", "ruff>=0.11.7"]
+dev = ["pytest>=8.3.5", "pytest-cov>=6.0.0", "ruff>=0.11.7"]
 
 [tool.uv.sources]
 tyapa-protocol = { path = "../../protocol", editable = true }
@@ -39,6 +39,14 @@ packages = ["tyapa_hearing"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["tyapa_hearing"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
 
 [tool.ruff]
 line-length = 100

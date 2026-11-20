@@ -24,16 +24,16 @@ test:
     for s in {{services}}; do (cd services/$s && uv run --extra dev pytest -q) || exit 1; done
 
 lint:
-    cd protocol && uv run ruff check tyapa_protocol/ tests/
-    for s in {{services}}; do (cd services/$s && uv run ruff check tyapa_$s/ tests/) || exit 1; done
+    cd protocol && uv run ruff check .
+    for s in {{services}}; do (cd services/$s && uv run ruff check .) || exit 1; done
 
 format:
-    cd protocol && uv run ruff check --fix tyapa_protocol/ tests/ && uv run ruff format tyapa_protocol/ tests/
-    for s in {{services}}; do (cd services/$s && uv run ruff check --fix tyapa_$s/ tests/ && uv run ruff format tyapa_$s/ tests/) || exit 1; done
+    cd protocol && uv run ruff check --fix . && uv run ruff format .
+    for s in {{services}}; do (cd services/$s && uv run ruff check --fix . && uv run ruff format .) || exit 1; done
 
 check: lint
-    cd protocol && uv run ruff format --check tyapa_protocol/ tests/
-    for s in {{services}}; do (cd services/$s && uv run ruff format --check tyapa_$s/ tests/) || exit 1; done
+    cd protocol && uv run ruff format --check .
+    for s in {{services}}; do (cd services/$s && uv run ruff format --check .) || exit 1; done
 
 ci: check test
 

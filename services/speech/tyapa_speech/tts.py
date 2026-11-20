@@ -1,4 +1,4 @@
-"""Kokoro TTS — the TextToSpeech half of the old LocalBrain/SpeechToSpeechActionProcessor."""
+"""Kokoro TTS."""
 
 import io
 import logging
@@ -61,8 +61,6 @@ class SpeechModels:
         logger.info("TextToSpeech ready")
 
     def synthesize(self, text: str) -> bytes:
-        # Same encode step the old SpeechToSpeechActionProcessor.process() used
-        # after calling text_to_speech.
         waveform, freq = self.tts.generate(text)
         buf = io.BytesIO()
         sf.write(buf, waveform, freq, format="wav", subtype="PCM_16")

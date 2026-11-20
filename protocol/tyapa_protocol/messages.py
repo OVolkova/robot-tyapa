@@ -11,6 +11,7 @@ class ProtocolError(Exception):
 
 
 def make(type_: str, **fields) -> dict:
+    # monotonic: only comparable between processes on the same machine, not across TYAPA_HOST
     return {"v": PROTOCOL_VERSION, "type": type_, "ts": time.monotonic(), **fields}
 
 

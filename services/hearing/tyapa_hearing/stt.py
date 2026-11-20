@@ -1,4 +1,4 @@
-"""Whisper STT — the SpeechToText half of the old LocalBrain/SpeechToSpeechActionProcessor."""
+"""Whisper STT."""
 
 import io
 import logging
@@ -66,8 +66,7 @@ class SpeechModels:
         logger.info("SpeechToText ready")
 
     def transcribe(self, wav: bytes) -> str:
-        # Same decode step the old SpeechToSpeechActionProcessor.process() used
-        # before calling speech_to_text — torchaudio.load handles the WAV header.
+        # torchaudio.load handles the WAV header.
         signal, frequency = torchaudio.load(io.BytesIO(wav))
         waveform = signal.numpy()[0]
         return self.stt(waveform, frequency)

@@ -1,5 +1,4 @@
-"""LLM client, system prompt, tool schema, and conversation history — moved from
-the old brain/llm_client.py and the TextToText half of brain/speech_to_speech.py."""
+"""LLM client, system prompt, tool schema, and conversation history."""
 
 import json
 import logging

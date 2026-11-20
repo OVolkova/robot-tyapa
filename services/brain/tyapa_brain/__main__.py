@@ -26,7 +26,7 @@ class Brain:
     def act(self, action: str, duration_s: float | None = None) -> bool:
         try:
             r = self.body.call("act", action=action, duration_s=duration_s)
-        except ServiceUnavailable as e:
+        except (ServiceUnavailable, ProtocolError) as e:
             log.warning("%s", e)
             return False
         if not r["ok"]:
@@ -36,19 +36,18 @@ class Brain:
     def current_action(self) -> str | None:
         try:
             return self.body.call("state").get("current_action")
-        except ServiceUnavailable:
+        except (ServiceUnavailable, ProtocolError):
             return None
 
     def say(self, text: str, listen_after: bool = True) -> None:
         """speech and hearing are separate services: speak first (blocking),
-        then re-open the mic ourselves -- the old combined "voice" service
-        used to do both steps internally."""
+        then re-open the mic ourselves."""
         try:
             if text:
                 self.speech.call("say", text=text, timeout_s=60)
             if listen_after:
                 self.hearing.call("listen")
-        except ServiceUnavailable as e:
+        except (ServiceUnavailable, ProtocolError) as e:
             log.warning("%s", e)
 
     # -- one conversational turn --

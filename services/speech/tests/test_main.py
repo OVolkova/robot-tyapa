@@ -28,3 +28,28 @@ def test_on_say_empty_text_skips_synthesis():
     mock_play.assert_not_called()
     assert reply["ok"] is True
     assert reply["spoken_s"] == 0
+
+
+def test_main_serves_say_command():
+    from tyapa_speech.__main__ import main
+
+    with (
+        patch("tyapa_speech.__main__.setup_logging"),
+        patch("tyapa_speech.__main__.Speech") as speech_cls,
+        patch("tyapa_speech.__main__.Server") as server,
+    ):
+        main()
+    assert server.call_args.args[1] == {"say": speech_cls.return_value.on_say}
+    server.return_value.serve_forever.assert_called_once()
+
+
+def test_suppress_stderr_restores_fd2():
+    import os
+
+    from tyapa_speech import _suppress_stderr
+
+    before = os.fstat(2)
+    with _suppress_stderr():
+        pass
+    after = os.fstat(2)
+    assert (before.st_dev, before.st_ino) == (after.st_dev, after.st_ino)

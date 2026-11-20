@@ -30,5 +30,9 @@ for s in hearing speech brain body; do
 done
 
 echo ""
+echo "Autostart on the Pi (units assume /home/pi/robot-tyapa, user pi — edit if different):"
+echo "  sudo cp systemd/tyapa@.service systemd/tyapa.target /etc/systemd/system/"
+echo "  sudo systemctl daemon-reload && sudo systemctl enable --now tyapa.target"
+echo ""
 echo "Done. Put LLM_PROVIDER / API key in services/brain/.env (never in git)."
 echo "Run 'just' to see available commands."
