@@ -1,3 +1,10 @@
+# Tyapa services split
+protocol/.venv/
+services/*/.venv/
+services/*/.env
+services/*/test_frames/
+frames/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -219,4 +226,7 @@ __marimo__/
 
 # DS_Store
 .DS_Store
+
+# scripts
+scripts/
 

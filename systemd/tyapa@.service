@@ -1,0 +1,18 @@
+[Unit]
+Description=Tyapa %i service
+PartOf=tyapa.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/robot-tyapa/services/%i
+EnvironmentFile=-/home/pi/robot-tyapa/services/%i/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/robot-tyapa/services/%i/.venv/bin/python -m tyapa_%i
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=tyapa.target

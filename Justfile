@@ -1,28 +1,50 @@
+set positional-arguments
 set dotenv-load
+
+services := "hearing speech brain body"
 
 default:
     @just --list
 
-install:
-    uv sync --extra dev
+# create / refresh every environment
+sync:
+    cd protocol && uv sync --extra dev
+    for s in {{services}}; do (cd services/$s && uv sync --extra dev) || exit 1; done
+
+# run one service in the foreground (stop it in systemd first)
+run svc:
+    cd services/{{svc}} && uv run $([ -f .env ] && echo "--env-file .env") python -m tyapa_{{svc}}
+
+# poke services: just cli ping | just cli say "hello" | just cli act sit | just cli fake-voice
+cli *args:
+    cd protocol && uv run python -m tyapa_protocol.cli "$@"
 
 test:
-    uv run pytest tests/unit -v --cov --cov-report=term-missing
-
-test-integration:
-    uv run pytest tests/integration -v -s
+    cd protocol && uv run --extra dev pytest -q
+    for s in {{services}}; do (cd services/$s && uv run --extra dev pytest -q) || exit 1; done
 
 lint:
-    uv run ruff check robot_tyapa/
-    uv run ruff check tests/
+    cd protocol && uv run ruff check .
+    for s in {{services}}; do (cd services/$s && uv run ruff check .) || exit 1; done
 
 format:
-    uv run ruff check --fix robot_tyapa/
-    uv run ruff format robot_tyapa/
-    uv run ruff check --fix tests/
-    uv run ruff format tests/
+    cd protocol && uv run ruff check --fix . && uv run ruff format .
+    for s in {{services}}; do (cd services/$s && uv run ruff check --fix . && uv run ruff format .) || exit 1; done
 
 check: lint
-    uv run ruff format --check robot_tyapa/
+    cd protocol && uv run ruff format --check .
+    for s in {{services}}; do (cd services/$s && uv run ruff format --check .) || exit 1; done
 
 ci: check test
+
+status:
+    systemctl --no-pager status 'tyapa*'
+
+restart svc="":
+    if [ -z "{{svc}}" ]; then sudo systemctl restart tyapa.target; else sudo systemctl restart "tyapa@{{svc}}"; fi
+
+stop:
+    sudo systemctl stop tyapa.target
+
+logs svc="":
+    journalctl -f -u "tyapa*{{svc}}*"

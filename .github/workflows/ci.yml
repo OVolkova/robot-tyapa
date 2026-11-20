@@ -3,20 +3,12 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get install -y portaudio19-dev
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.11"
-      - run: uv sync --extra dev
-      - run: uv run ruff check robot_tyapa/ tests/unit/ tests/integration/
-      - run: uv run ruff format --check robot_tyapa/ tests/unit/ tests/integration/
-
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [protocol, services/hearing, services/speech, services/brain, services/body]
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get install -y portaudio19-dev
@@ -25,6 +17,11 @@ jobs:
           python-version: "3.11"
           enable-cache: true
       - name: Install dependencies
+        working-directory: ${{ matrix.project }}
         run: uv sync --extra dev
-      - name: Run tests with coverage
-        run: uv run pytest tests/unit -v --cov --cov-report=term-missing
+      - name: Lint
+        working-directory: ${{ matrix.project }}
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Run tests
+        working-directory: ${{ matrix.project }}
+        run: uv run pytest -q
