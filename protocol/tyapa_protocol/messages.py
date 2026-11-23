@@ -12,6 +12,9 @@ class ProtocolError(Exception):
 
 def make(type_: str, **fields) -> dict:
     # monotonic: only comparable between processes on the same machine, not across TYAPA_HOST
+    reserved = fields.keys() & {"v", "type", "ts"}
+    if reserved:
+        raise ValueError(f"reserved message field(s): {sorted(reserved)}")
     return {"v": PROTOCOL_VERSION, "type": type_, "ts": time.monotonic(), **fields}
 
 
@@ -32,9 +35,8 @@ def decode(raw: bytes) -> dict:
         msg = json.loads(raw)
     except ValueError as e:
         raise ProtocolError(f"not JSON: {e}") from e
-    if not isinstance(msg, dict) or msg.get("v") != PROTOCOL_VERSION:
-        raise ProtocolError(
-            f"protocol version {msg.get('v') if isinstance(msg, dict) else '?'} "
-            f"!= {PROTOCOL_VERSION}"
-        )
+    if not isinstance(msg, dict):
+        raise ProtocolError(f"expected a JSON object, got {type(msg).__name__}")
+    if msg.get("v") != PROTOCOL_VERSION:
+        raise ProtocolError(f"protocol version {msg.get('v')!r} != {PROTOCOL_VERSION}")
     return msg

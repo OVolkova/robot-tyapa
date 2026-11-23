@@ -102,15 +102,15 @@ def test_find_input_device_returns_none_when_no_inputs():
 _CHUNK = b"\x00" * (1024 * 4)  # 1024 int32 zeros; content irrelevant (VAD is mocked)
 
 # no_speech_timeout=0.32 -> no_speech_chunks=5; max_seconds=0.32 -> max_chunks=5
-_VAD_KWARGS = dict(
-    rate=16000,
-    chunk_size=1024,
-    vad_threshold=0.5,
-    silence_ms=300,
-    max_seconds=0.32,
-    min_speech_seconds=0.1,
-    no_speech_timeout=0.32,
-)
+_VAD_KWARGS = {
+    "rate": 16000,
+    "chunk_size": 1024,
+    "vad_threshold": 0.5,
+    "silence_ms": 300,
+    "max_seconds": 0.32,
+    "min_speech_seconds": 0.1,
+    "no_speech_timeout": 0.32,
+}
 
 
 def _run_capture(vad_events: list, **kwargs):

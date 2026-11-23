@@ -3,6 +3,7 @@ import logging
 import wave
 
 import numpy as np
+
 from tyapa_protocol import suppress_stderr
 
 from .config import (
@@ -71,7 +72,7 @@ def capture_with_vad(
     min_speech_seconds: float = VAD_MIN_SPEECH_S,
     no_speech_timeout: float = VAD_NO_SPEECH_TIMEOUT_S,
 ) -> bytes | None:
-    """Block until speech ends. Returns WAV bytes, or None on no-speech timeout or too-short burst."""
+    """Block until speech ends. Returns WAV bytes, or None on no-speech timeout or short burst."""
     import pyaudio
     import torch
     from silero_vad import VADIterator

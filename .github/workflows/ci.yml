@@ -1,6 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -11,7 +17,9 @@ jobs:
         project: [protocol, services/hearing, services/speech, services/brain, services/body]
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get install -y portaudio19-dev
+      - name: Install PortAudio (hearing and speech use PyAudio)
+        if: contains(fromJSON('["services/hearing", "services/speech"]'), matrix.project)
+        run: sudo apt-get install -y portaudio19-dev
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"

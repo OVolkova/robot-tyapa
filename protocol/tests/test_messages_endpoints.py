@@ -9,10 +9,26 @@ from tyapa_protocol import setup_logging
 
 def test_make_ok_error_shapes():
     msg = m.make("x", a=1)
-    assert msg["v"] == m.PROTOCOL_VERSION and msg["type"] == "x" and msg["a"] == 1
+    assert msg["v"] == m.PROTOCOL_VERSION
+    assert msg["type"] == "x"
+    assert msg["a"] == 1
     assert m.ok(b=2)["ok"] is True
     err = m.error("boom")
-    assert err["ok"] is False and err["error"] == "boom"
+    assert err["ok"] is False
+    assert err["error"] == "boom"
+
+
+def test_make_rejects_reserved_fields():
+    for field in ("v", "type", "ts"):
+        with pytest.raises(ValueError, match="reserved"):
+            m.make("x", **{field: 1})
+
+
+def test_decode_error_messages_say_what_is_wrong():
+    with pytest.raises(m.ProtocolError, match="JSON object"):
+        m.decode(b"[1, 2]")
+    with pytest.raises(m.ProtocolError, match="version 99"):
+        m.decode(b'{"v": 99}')
 
 
 def test_encode_decode_roundtrip():

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from tyapa_speech.__main__ import Speech
+from tyapa_speech.service import Speech
 
 
 def _speech_with_mock_models() -> Speech:
@@ -12,7 +12,7 @@ def _speech_with_mock_models() -> Speech:
 
 def test_on_say_plays_audio_and_reports_spoken_s():
     speech = _speech_with_mock_models()
-    with patch("tyapa_speech.__main__.play_wav_bytes") as mock_play:
+    with patch("tyapa_speech.service.play_wav_bytes") as mock_play:
         reply = speech.on_say({"text": "Woof!"})
     speech.models.synthesize.assert_called_once_with("Woof!")
     mock_play.assert_called_once()
@@ -22,7 +22,7 @@ def test_on_say_plays_audio_and_reports_spoken_s():
 
 def test_on_say_empty_text_skips_synthesis():
     speech = _speech_with_mock_models()
-    with patch("tyapa_speech.__main__.play_wav_bytes") as mock_play:
+    with patch("tyapa_speech.service.play_wav_bytes") as mock_play:
         reply = speech.on_say({"text": "   "})
     speech.models.synthesize.assert_not_called()
     mock_play.assert_not_called()
@@ -31,12 +31,12 @@ def test_on_say_empty_text_skips_synthesis():
 
 
 def test_main_serves_say_command():
-    from tyapa_speech.__main__ import main
+    from tyapa_speech.service import main
 
     with (
-        patch("tyapa_speech.__main__.setup_logging"),
-        patch("tyapa_speech.__main__.Speech") as speech_cls,
-        patch("tyapa_speech.__main__.Server") as server,
+        patch("tyapa_speech.service.setup_logging"),
+        patch("tyapa_speech.service.Speech") as speech_cls,
+        patch("tyapa_speech.service.Server") as server,
     ):
         main()
     assert server.call_args.args[1] == {"say": speech_cls.return_value.on_say}

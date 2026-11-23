@@ -1,39 +1,39 @@
 set positional-arguments
-set dotenv-load
 
 services := "hearing speech brain body"
 
 default:
     @just --list
 
+# run a command in protocol/ and in every service: just each uv run ruff check .
+each +cmd:
+    cd protocol && {{cmd}}
+    for s in {{services}}; do (cd "services/$s" && {{cmd}}) || exit 1; done
+
 # create / refresh every environment
 sync:
-    cd protocol && uv sync --extra dev
-    for s in {{services}}; do (cd services/$s && uv sync --extra dev) || exit 1; done
+    just each uv sync --extra dev
 
 # run one service in the foreground (stop it in systemd first)
 run svc:
-    cd services/{{svc}} && uv run $([ -f .env ] && echo "--env-file .env") python -m tyapa_{{svc}}
+    cd "services/{{svc}}" && uv run $([ -f .env ] && echo "--env-file .env") python -m "tyapa_{{svc}}"
 
 # poke services: just cli ping | just cli say "hello" | just cli act sit | just cli fake-voice
 cli *args:
     cd protocol && uv run python -m tyapa_protocol.cli "$@"
 
 test:
-    cd protocol && uv run --extra dev pytest -q
-    for s in {{services}}; do (cd services/$s && uv run --extra dev pytest -q) || exit 1; done
+    just each uv run --extra dev pytest -q
 
 lint:
-    cd protocol && uv run ruff check .
-    for s in {{services}}; do (cd services/$s && uv run ruff check .) || exit 1; done
+    just each uv run ruff check .
 
 format:
-    cd protocol && uv run ruff check --fix . && uv run ruff format .
-    for s in {{services}}; do (cd services/$s && uv run ruff check --fix . && uv run ruff format .) || exit 1; done
+    just each uv run ruff check --fix .
+    just each uv run ruff format .
 
 check: lint
-    cd protocol && uv run ruff format --check .
-    for s in {{services}}; do (cd services/$s && uv run ruff format --check .) || exit 1; done
+    just each uv run ruff format --check .
 
 ci: check test
 

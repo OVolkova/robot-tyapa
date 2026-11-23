@@ -32,7 +32,7 @@ def resample(waveform, target_freq: int, original_freq: int):
 class SpeechToText:
     def __init__(
         self,
-        model_name: str = "openai/whisper-tiny.en",
+        model_name: str,
         model_freq: int = WHISPER_FREQUENCY,
         device: str | None = None,
     ):
@@ -57,7 +57,7 @@ class SpeechToText:
         return transcription[0]
 
 
-class SpeechModels:
+class Transcriber:
     """The hearing service's model wrapper: WAV bytes in, transcript out."""
 
     def __init__(self, stt_model: str):

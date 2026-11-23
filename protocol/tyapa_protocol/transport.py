@@ -1,12 +1,16 @@
 """Thin ZeroMQ wrappers. Rule: a socket is only ever used by the thread that created it."""
 
 import logging
+from collections.abc import Callable, Mapping
 
 import zmq
 
 from . import messages as m
 
 log = logging.getLogger(__name__)
+
+Reply = dict | tuple[dict, bytes]  # a handler answers with a dict, or (dict, binary blob)
+Handler = Callable[[dict], Reply]
 _ctx = zmq.Context.instance()
 
 
@@ -42,7 +46,7 @@ class Subscriber:
 class Server:
     """Answers commands. handlers: {"say": fn(msg) -> reply_dict | (reply_dict, bytes)}."""
 
-    def __init__(self, addr: str, handlers: dict, name: str):
+    def __init__(self, addr: str, handlers: Mapping[str, Handler], name: str):
         self.name = name
         self.handlers = {"ping": lambda msg: m.ok(service=name), **handlers}
         self.sock = _ctx.socket(zmq.REP)
@@ -52,21 +56,30 @@ class Server:
         if not self.sock.poll(timeout_ms):
             return False
         raw = self.sock.recv()
+        # A REP socket MUST always reply, so build the whole reply (including encoding)
+        # inside the try: a bad handler result becomes an error reply, not a dead service.
         try:
             msg = m.decode(raw)
             handler = self.handlers.get(msg.get("type"))
             result = handler(msg) if handler else m.error(f"unknown command {msg.get('type')!r}")
-        except Exception as e:  # a REP socket MUST always reply, even on errors
+            frames = self._encode_result(result)
+        except Exception as e:
             log.exception("%s: command failed", self.name)
-            result = m.error(f"{type(e).__name__}: {e}")
-        if isinstance(result, tuple):
-            reply, blob = result
-            self.sock.send_multipart([m.encode(reply), blob])
-        else:
-            self.sock.send(m.encode(result))
+            frames = [m.encode(m.error(f"{type(e).__name__}: {e}"))]
+        self.sock.send_multipart(frames)
         return True
 
-    def serve_forever(self, tick=None, tick_ms: int = 100) -> None:
+    @staticmethod
+    def _encode_result(result: object) -> list[bytes]:
+        reply, blob = result if isinstance(result, tuple) else (result, None)
+        if not isinstance(reply, dict):
+            raise TypeError(f"handler returned {type(reply).__name__}, expected dict")
+        frames = [m.encode(reply)]
+        if blob is not None:
+            frames.append(blob)
+        return frames
+
+    def serve_forever(self, tick: Callable[[], None] | None = None, tick_ms: int = 100) -> None:
         """Serve commands; call tick() at least every tick_ms (for timers/watchdogs)."""
         while True:
             self.serve_once(tick_ms)

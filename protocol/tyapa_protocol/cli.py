@@ -2,18 +2,20 @@
 
 import argparse
 import itertools
+import sys
 import threading
 import time
 
 from tyapa_protocol import endpoints as ep
 from tyapa_protocol import messages as m
+from tyapa_protocol.messages import ProtocolError
 from tyapa_protocol.transport import Client, Publisher, Server, ServiceUnavailable, Subscriber
 
+# Services that answer commands (brain only listens; camera is reserved, not built yet).
 SERVICES = {
     "hearing": ep.HEARING_CMD,
     "speech": ep.SPEECH_CMD,
     "body": ep.BODY_CMD,
-    "camera": ep.CAMERA_CMD,
 }
 
 
@@ -25,7 +27,7 @@ def show(reply: dict) -> None:
     print({k: v for k, v in reply.items() if k not in ("v", "ts")})
 
 
-def cmd_ping(a):
+def cmd_ping(a: argparse.Namespace) -> None:
     for name in SERVICES:
         try:
             r = client(name, 1.0).call("ping")
@@ -34,43 +36,47 @@ def cmd_ping(a):
             print(f"{name:7s} --   not running")
 
 
-def cmd_say(a):
+def cmd_say(a: argparse.Namespace) -> None:
     show(client("speech", 60).call("say", text=a.text))
 
 
-def cmd_listen(a):
+def cmd_listen(a: argparse.Namespace) -> None:
     show(client("hearing").call("listen"))
 
 
-def cmd_hold(a):
+def cmd_hold(a: argparse.Namespace) -> None:
     show(client("hearing").call("hold"))
 
 
-def cmd_act(a):
+def cmd_act(a: argparse.Namespace) -> None:
     show(client("body").call("act", action=a.action, duration_s=a.seconds))
 
 
-def cmd_raw(a):
+def cmd_raw(a: argparse.Namespace) -> None:
     show(client("body").call("raw", cmd=a.cmd))
 
 
-def cmd_stop(a):
+def cmd_stop(a: argparse.Namespace) -> None:
     show(client("body").call("stop"))
 
 
-def cmd_state(a):
+def cmd_state(a: argparse.Namespace) -> None:
     show(client("body").call("state"))
 
 
-def cmd_events(a):
+def cmd_events(a: argparse.Namespace) -> None:  # pragma: no cover - infinite interactive loop
     sub = Subscriber(ep.connect_addr(ep.HEARING_EVENTS), "hearing")
     print("waiting for hearing events — speak to the dog (Ctrl-C to stop)")
     while True:
-        ev = sub.recv()
+        try:
+            ev = sub.recv()
+        except ProtocolError as e:
+            print(f"bad event: {e}")
+            continue
         print(f"{ev['type']:13s}", {k: v for k, v in ev.items() if k not in ("v", "type", "ts")})
 
 
-def cmd_fake_voice(a):
+def cmd_fake_voice(a: argparse.Namespace) -> None:  # pragma: no cover - interactive
     """Fake hearing + speech: typed lines are published as speech_ended/heard; say() is printed."""
 
     def serve():
@@ -102,7 +108,7 @@ def cmd_fake_voice(a):
             pub.publish("hearing", m.make("heard", utt=utt, text=text.strip(), t_end=t, stt_s=0.0))
 
 
-def main():
+def main() -> int:
     p = argparse.ArgumentParser(prog="tyapa")
     sub = p.add_subparsers(required=True)
     sub.add_parser("ping", help="which services are running").set_defaults(fn=cmd_ping)
@@ -129,11 +135,13 @@ def main():
     a = p.parse_args()
     try:
         a.fn(a)
-    except ServiceUnavailable as e:
-        print(f"error: {e} — is it running?  (just status)")
+    except (ServiceUnavailable, ProtocolError) as e:
+        print(f"error: {e} — is it running?  (just status)", file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         pass
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

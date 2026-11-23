@@ -1,32 +1,35 @@
 import time
 from unittest.mock import MagicMock
 
+import pytest
+
 from tyapa_body import config
-from tyapa_body.__main__ import Body, canonical, gait_limit, is_gait
+from tyapa_body.dry_run import DryRunRobot
+from tyapa_body.service import Body, gait_limit, make_robot, raw_is_safe
+from tyapa_protocol.commands import GAITS, PETOI_COMMANDS
 
 
 def _body_with_mock_robot() -> Body:
-    body = Body.__new__(Body)
-    body.robot = MagicMock()
-    body.current = None
-    body.since = time.monotonic()
-    body.stop_at = None
-    return body
+    return Body(MagicMock())
 
 
-def test_canonical_accepts_known_key():
-    assert canonical("sit") == "sit"
-    assert canonical("wkR") == "wkR"  # literal key, no mirroring needed
+def test_gait_set_only_contains_looping_gaits():
+    assert "wkF" in GAITS
+    assert "sit" not in GAITS
+    assert "flip" not in GAITS  # trick, not a looping gait
+    assert PETOI_COMMANDS.keys() >= GAITS
 
 
-def test_canonical_rejects_unknown_key():
-    assert canonical("moonwalk") is None
+def test_make_robot_dry_run(monkeypatch):
+    monkeypatch.setattr(config, "DRY_RUN", True)
+    assert isinstance(make_robot(), DryRunRobot)
 
 
-def test_is_gait():
-    assert is_gait("wkF") is True
-    assert is_gait("sit") is False
-    assert is_gait("flip") is False  # trick, not a looping gait
+def test_dry_run_robot_accepts_everything():
+    robot = DryRunRobot()
+    robot.connect()
+    assert robot.execute_action("ksit") is True
+    assert robot.send_raw("m0 40") is True
 
 
 def test_gait_limit_caps_at_config_default():
@@ -95,3 +98,43 @@ def test_tick_does_nothing_before_the_deadline():
     body.stop_at = time.monotonic() + 10
     body.tick()
     body.robot.execute_action.assert_not_called()
+
+
+def test_on_act_bad_duration_errors_before_moving():
+    body = _body_with_mock_robot()
+    reply = body.on_act({"action": "wkF", "duration_s": "5"})
+    assert reply["ok"] is False
+    body.robot.execute_action.assert_not_called()
+    assert body.current is None
+
+
+def test_on_act_failed_write_reports_error_and_keeps_state():
+    body = _body_with_mock_robot()
+    body.robot.execute_action.return_value = False
+    reply = body.on_act({"action": "sit"})
+    assert reply["ok"] is False
+    assert body.current is None
+
+
+def test_on_raw_failed_write_reports_error():
+    body = _body_with_mock_robot()
+    body.robot.send_raw.return_value = False
+    assert body.on_raw({"cmd": "m0 40"})["ok"] is False
+
+
+def test_on_stop_failed_write_reports_error():
+    body = _body_with_mock_robot()
+    body.robot.execute_action.return_value = False
+    assert body.on_stop({})["ok"] is False
+
+
+@pytest.mark.parametrize("cmd", ["m0 40", "m0 30 8 -20", "m15 -125", "m0 125"])
+def test_raw_is_safe_accepts_in_range_joint_moves(cmd):
+    assert raw_is_safe(cmd)
+
+
+@pytest.mark.parametrize(
+    "cmd", ["m16 0", "m0 126", "m0 -126", "m0 30 99 5", "kbf", "m0", "m0 40; x"]
+)
+def test_raw_is_safe_rejects_out_of_range_or_malformed(cmd):
+    assert not raw_is_safe(cmd)

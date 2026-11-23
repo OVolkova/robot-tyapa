@@ -1,4 +1,10 @@
-"""Petoi skill catalogue shared by body (validate/execute) and brain (prompt, tool schema). Pure data."""
+"""Petoi skill catalogue shared by body (validate/execute) and brain (prompt, tool schema).
+
+Pure data.
+"""
+
+# The neutral standing posture: what body returns to on stop, and what brain assumes by default.
+STAND_ACTION = "balance"
 
 PETOI_COMMANDS: dict[str, str] = {
     # ── GAITS ────────────────────────────────────────────────────────────────

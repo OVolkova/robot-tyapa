@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tyapa_hearing.__main__ import Hearing, main
+from tyapa_hearing.service import Hearing, main
 
 
 def _hearing() -> Hearing:
@@ -33,7 +33,7 @@ def test_on_listen_opens_mic_and_on_hold_closes_it():
 def test_capture_once_publishes_speech_ended_then_heard():
     h, events = _hearing(), MagicMock()
     h.listening.set()
-    with patch("tyapa_hearing.__main__.capture_with_vad", return_value=b"wav"):
+    with patch("tyapa_hearing.service.capture_with_vad", return_value=b"wav"):
         h._capture_once(events)
     assert _types(events) == ["speech_ended", "heard"]
     assert events.publish.call_args.args[1]["text"] == "hello dog"
@@ -44,7 +44,7 @@ def test_capture_once_empty_transcript_reopens_mic_without_heard():
     h, events = _hearing(), MagicMock()
     h.models.transcribe.return_value = "   "
     h.listening.set()
-    with patch("tyapa_hearing.__main__.capture_with_vad", return_value=b"wav"):
+    with patch("tyapa_hearing.service.capture_with_vad", return_value=b"wav"):
         h._capture_once(events)
     assert _types(events) == ["speech_ended"]
     assert h.listening.is_set()
@@ -53,7 +53,7 @@ def test_capture_once_empty_transcript_reopens_mic_without_heard():
 def test_capture_once_no_speech_publishes_nothing():
     h, events = _hearing(), MagicMock()
     h.listening.set()
-    with patch("tyapa_hearing.__main__.capture_with_vad", return_value=None):
+    with patch("tyapa_hearing.service.capture_with_vad", return_value=None):
         h._capture_once(events)
     events.publish.assert_not_called()
 
@@ -80,8 +80,8 @@ def test_capture_loop_survives_exceptions_and_reopens_mic():
     h = _hearing()
     h._capture_once = MagicMock(side_effect=[RuntimeError("mic busy"), KeyboardInterrupt])
     with (
-        patch("tyapa_hearing.__main__.Publisher"),
-        patch("tyapa_hearing.__main__.time.sleep") as sleep,
+        patch("tyapa_hearing.service.Publisher"),
+        patch("tyapa_hearing.service.time.sleep") as sleep,
         pytest.raises(KeyboardInterrupt),  # BaseException: only way out of the infinite loop
     ):
         h.capture_loop()
@@ -92,10 +92,10 @@ def test_capture_loop_survives_exceptions_and_reopens_mic():
 
 def test_main_starts_capture_thread_and_serves():
     with (
-        patch("tyapa_hearing.__main__.setup_logging"),
-        patch("tyapa_hearing.__main__.Hearing") as hearing_cls,
-        patch("tyapa_hearing.__main__.threading.Thread") as thread,
-        patch("tyapa_hearing.__main__.Server") as server,
+        patch("tyapa_hearing.service.setup_logging"),
+        patch("tyapa_hearing.service.Hearing") as hearing_cls,
+        patch("tyapa_hearing.service.threading.Thread") as thread,
+        patch("tyapa_hearing.service.Server") as server,
     ):
         main()
     thread.assert_called_once()

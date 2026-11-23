@@ -22,11 +22,11 @@ def resample(waveform, target_freq: int, original_freq: int):
 class TextToSpeech:
     def __init__(
         self,
-        voice: str = "af_heart",
-        lang_code: str = "b",
-        speed: float = 1.0,
+        voice: str,
+        lang_code: str,
+        speed: float,
+        playback_freq: int,
         model_freq: int = KOKORO_VOICE_FREQ,
-        playback_freq: int = 16000,
     ):
         self.voice = voice
         self.speed = speed
@@ -51,7 +51,7 @@ class TextToSpeech:
         return waveform, self.playback_freq
 
 
-class SpeechModels:
+class Synthesizer:
     """The speech service's model wrapper: text in, WAV bytes out."""
 
     def __init__(self, voice: str, lang_code: str, speed: float, playback_freq: int):

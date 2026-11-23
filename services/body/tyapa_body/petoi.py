@@ -3,6 +3,7 @@ import time
 
 import serial
 import serial.tools.list_ports
+
 from tyapa_protocol.commands import PETOI_COMMANDS
 
 from .base import RobotController
@@ -39,31 +40,28 @@ class PetoiController(RobotController):
         logger.info("Connected to Petoi on %s at %d baud", self.port, self.baud)
         self.execute_action(f"k{STOP_ACTION}")
 
-    def execute_action(self, action: str) -> None:
-        if not self._is_open():
-            logger.warning("Serial port not open; skipping action %r", action)
-            return
+    def execute_action(self, action: str) -> bool:
+        """Send a skill (e.g. 'ksit'). True only if the command was written to the port."""
         cmd = self._resolve_command(action)
         if cmd is None:
-            return
+            return False
+        return self._write(cmd, "Serial")
+
+    def send_raw(self, cmd: str) -> bool:
+        return self._write(cmd, "Serial (raw)")
+
+    def _write(self, cmd: str, label: str) -> bool:
+        ser = self.ser
+        if ser is None or not ser.is_open:
+            logger.warning("Serial port not open; skipping %r", cmd)
+            return False
         try:
-            self.ser.write(f"{cmd}\n".encode("ascii"))  # type: ignore[union-attr]
-            logger.info("Serial -> %r", cmd)
+            ser.write(f"{cmd}\n".encode("ascii"))
         except serial.SerialException as e:
             logger.error("Serial write failed: %s", e)
-
-    def send_raw(self, cmd: str) -> None:
-        if not self._is_open():
-            logger.warning("Serial port not open; skipping raw command %r", cmd)
-            return
-        try:
-            self.ser.write(f"{cmd}\n".encode("ascii"))  # type: ignore[union-attr]
-            logger.info("Serial (raw) -> %r", cmd)
-        except serial.SerialException as e:
-            logger.error("Serial write failed: %s", e)
-
-    def _is_open(self) -> bool:
-        return self.ser is not None and self.ser.is_open
+            return False
+        logger.info("%s -> %r", label, cmd)
+        return True
 
     def _resolve_command(self, action: str) -> str | None:
         if action.startswith("k"):

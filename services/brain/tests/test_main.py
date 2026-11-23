@@ -1,8 +1,7 @@
 from unittest.mock import MagicMock
 
+from tyapa_brain.service import Brain
 from tyapa_protocol.transport import ServiceUnavailable
-
-from tyapa_brain.__main__ import Brain
 
 
 def _brain_with_mocks() -> Brain:
@@ -21,7 +20,7 @@ def _brain_with_mocks() -> Brain:
 def test_say_calls_speech_then_reopens_hearing():
     brain = _brain_with_mocks()
     brain.say("Woof!")
-    brain.speech.call.assert_called_once_with("say", text="Woof!", timeout_s=60)
+    brain.speech.call.assert_called_once_with("say", text="Woof!")
     brain.hearing.call.assert_called_once_with("listen")
 
 
@@ -43,7 +42,7 @@ def test_say_swallows_service_unavailable():
     brain = _brain_with_mocks()
     brain.speech.call.side_effect = ServiceUnavailable("speech: down")
     brain.say("hi")  # must not raise
-    brain.hearing.call.assert_not_called()  # skipped after the speech call raised
+    brain.hearing.call.assert_called_once_with("listen")  # mic reopens even though speech failed
 
 
 # -- act() / current_action(): one missing service must not kill the brain ---
@@ -93,3 +92,22 @@ def test_handle_heard_with_no_action_only_says():
     brain.handle_heard({"utt": 1, "text": "hi"})
 
     assert calls == [("say", "Hello!")]
+
+
+def test_say_reopens_mic_even_when_speech_fails():
+    brain = _brain_with_mocks()
+    brain.speech.call.side_effect = ServiceUnavailable("speech: no reply")
+    brain.say("Woof!")
+    brain.hearing.call.assert_called_once_with("listen")
+
+
+def test_handle_heard_summarises_after_speaking():
+    brain = _brain_with_mocks()
+    brain.mind.reply.return_value = ("hi", None)
+    brain.body.call.return_value = {"ok": True, "current_action": "balance"}
+    order = MagicMock()
+    order.attach_mock(brain.speech.call, "say")
+    order.attach_mock(brain.mind.compact, "compact")
+    brain.handle_heard({"text": "hello", "utt": 1})
+    names = [c[0] for c in order.mock_calls]
+    assert names.index("say") < names.index("compact")

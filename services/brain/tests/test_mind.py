@@ -3,7 +3,6 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-from tyapa_protocol.commands import PETOI_COMMANDS
 
 from tyapa_brain.mind import (
     _KEEP_RECENT,
@@ -12,9 +11,9 @@ from tyapa_brain.mind import (
     SYSTEM_PROMPT,
     Mind,
     OpenAILLMClient,
-    TextToText,
     create_llm_client,
 )
+from tyapa_protocol.commands import PETOI_COMMANDS
 
 # -- tool schema -------------------------------------------------------------
 
@@ -42,22 +41,11 @@ def test_system_prompt_lists_commands():
 # -- factory ------------------------------------------------------------------
 
 
-def test_create_llm_client_defaults_to_openai(monkeypatch):
+def test_create_llm_client_builds_openai_client(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.delenv("LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("LLM_MODEL", raising=False)
     with patch.dict(sys.modules, {"openai": MagicMock()}):
-        client = create_llm_client()
+        client = create_llm_client(provider="openai", model="gpt-5.4-mini")
     assert isinstance(client, OpenAILLMClient)
-    assert client.model == "gpt-5.4-nano"
-
-
-def test_create_llm_client_respects_env_vars(monkeypatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_PROVIDER", "openai")
-    monkeypatch.setenv("LLM_MODEL", "gpt-5.4-mini")
-    with patch.dict(sys.modules, {"openai": MagicMock()}):
-        client = create_llm_client()
     assert client.model == "gpt-5.4-mini"
 
 
@@ -71,9 +59,11 @@ def test_create_llm_client_unknown_provider_raises():
 
 def test_openai_client_missing_api_key_raises(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    with patch.dict(sys.modules, {"openai": MagicMock()}):
-        with pytest.raises(EnvironmentError, match="OPENAI_API_KEY"):
-            OpenAILLMClient(model="gpt-5.4-nano", api_key=None)
+    with (
+        patch.dict(sys.modules, {"openai": MagicMock()}),
+        pytest.raises(RuntimeError, match="OPENAI_API_KEY"),
+    ):
+        OpenAILLMClient(model="gpt-5.4-nano", api_key=None)
 
 
 def _fake_client(
@@ -161,15 +151,15 @@ def test_complete_ignores_unknown_tool_calls():
     client.client = MagicMock()
     client.client.chat.completions.create.return_value = response
 
-    text, action = client.complete([{"role": "user", "content": "x"}])
+    _text, action = client.complete([{"role": "user", "content": "x"}])
     assert action is None
 
 
-# -- TextToText: conversation history -----------------------------------------
+# -- Mind: conversation history -----------------------------------------
 
 
-def _make_text_to_text(llm_text: str = "Hello!", llm_action: str | None = None) -> TextToText:
-    tt = TextToText.__new__(TextToText)
+def _make_mind(llm_text: str = "Hello!", llm_action: str | None = None) -> Mind:
+    tt = Mind.__new__(Mind)
     tt.llm = MagicMock()
     tt.llm.complete.return_value = (llm_text, llm_action)
     tt.history = []
@@ -177,106 +167,124 @@ def _make_text_to_text(llm_text: str = "Hello!", llm_action: str | None = None) 
 
 
 def test_history_empty_before_first_call():
-    tt = _make_text_to_text()
+    tt = _make_mind()
     assert len(tt.history) == 0
 
 
 def test_history_has_two_entries_after_one_call():
-    tt = _make_text_to_text()
-    tt.generate("hello", "balance")
+    tt = _make_mind()
+    tt.reply("hello", "balance")
     assert len(tt.history) == 2
 
 
 def test_history_roles_alternate():
-    tt = _make_text_to_text()
-    tt.generate("hello", "balance")
+    tt = _make_mind()
+    tt.reply("hello", "balance")
     roles = [m["role"] for m in tt.history]
     assert roles == ["user", "assistant"]
 
 
 def test_history_summarised_when_full():
-    tt = _make_text_to_text()
+    tt = _make_mind()
     for _ in range(5):
-        tt.generate("hello", "balance")
+        tt.reply("hello", "balance")
+        tt.compact()
     assert len(tt.history) == _KEEP_RECENT + 1
 
 
 def test_summary_message_is_system_role():
-    tt = _make_text_to_text()
+    tt = _make_mind()
     for _ in range(5):
-        tt.generate("hello", "balance")
+        tt.reply("hello", "balance")
+        tt.compact()
     assert tt.history[0]["role"] == "system"
     assert "Summary" in tt.history[0]["content"]
 
 
 def test_summary_calls_llm_with_old_messages():
-    tt = _make_text_to_text()
+    tt = _make_mind()
     for _ in range(5):
-        tt.generate("hello", "balance")
+        tt.reply("hello", "balance")
+        tt.compact()
     _, last_call_kwargs = tt.llm.complete.call_args
     assert "tools" not in last_call_kwargs
 
 
 def test_history_stays_bounded_across_multiple_summarisations():
-    tt = _make_text_to_text()
+    tt = _make_mind()
     for _ in range(12):
-        tt.generate("hello", "balance")
+        tt.reply("hello", "balance")
+        tt.compact()
     assert len(tt.history) < _MAX_HISTORY
 
 
 def test_history_fed_into_subsequent_call():
-    tt = _make_text_to_text()
-    tt.generate("hello", "balance")
-    tt.generate("world", "sit")
+    tt = _make_mind()
+    tt.reply("hello", "balance")
+    tt.reply("world", "sit")
     messages = tt.llm.complete.call_args[0][0]
     # system + 2 history entries + new user = 4
     assert len(messages) == 4
 
 
-# -- TextToText: LLM message construction -------------------------------------
+# -- Mind: LLM message construction -------------------------------------
 
 
 def test_current_action_appears_in_user_message():
-    tt = _make_text_to_text()
-    tt.generate("hello", "trF")
+    tt = _make_mind()
+    tt.reply("hello", "trF")
     messages = tt.llm.complete.call_args[0][0]
     user_msg = next(m for m in messages if m["role"] == "user")
     assert "trF" in user_msg["content"]
 
 
 def test_system_message_is_first():
-    tt = _make_text_to_text()
-    tt.generate("hello", "balance")
+    tt = _make_mind()
+    tt.reply("hello", "balance")
     messages = tt.llm.complete.call_args[0][0]
     assert messages[0]["role"] == "system"
 
 
-def test_text_to_text_init():
+def test_mind_init():
     with patch("tyapa_brain.mind.create_llm_client") as mock_create:
-        tt = TextToText(provider="openai", model="gpt-5.4-nano")
+        mind = Mind(provider="openai", model="gpt-5.4-nano")
     mock_create.assert_called_once_with(provider="openai", model="gpt-5.4-nano")
-    assert tt.history == []
+    assert mind.history == []
 
 
-# -- Mind: thin wrapper ------
+def test_reply_defaults_current_action_to_standing():
+    mind = _make_mind()
+    mind.reply("hi", None)
+    user_msg = mind.llm.complete.call_args[0][0][-1]["content"]
+    assert "[Current robot action: balance]" in user_msg
 
 
-def test_mind_reply_forwards_to_text_to_text_and_defaults_current_action():
-    mind = Mind.__new__(Mind)
-    mind.text_to_text = MagicMock()
-    mind.text_to_text.generate.return_value = ("Sitting!", "sit")
-
-    text, action = mind.reply("sit down", current_action=None)
-
-    mind.text_to_text.generate.assert_called_once_with("sit down", "balance")
-    assert (text, action) == ("Sitting!", "sit")
+def test_compact_swallows_llm_failure_and_keeps_history():
+    mind = _make_mind()
+    for _ in range(5):
+        mind.reply("hello", "balance")
+    mind.llm.complete.side_effect = RuntimeError("boom")
+    mind.compact()  # must not raise
+    assert len(mind.history) == 10
 
 
-def test_mind_reply_passes_through_current_action():
-    mind = Mind.__new__(Mind)
-    mind.text_to_text = MagicMock()
-    mind.text_to_text.generate.return_value = ("ok", None)
+def test_malformed_tool_arguments_keep_text_reply():
+    client = _fake_client("hello", tool_action="sit")
+    client.client.chat.completions.create.return_value.choices[0].message.tool_calls[
+        0
+    ].function.arguments = "{not json"
+    assert client.complete([], tools=[]) == ("hello", None)
 
-    mind.reply("stop", current_action="wkF")
 
-    mind.text_to_text.generate.assert_called_once_with("stop", "wkF")
+def test_unknown_action_from_llm_is_dropped():
+    client = _fake_client("hello", tool_action="moonwalk123")
+    assert client.complete([], tools=[]) == ("hello", None)
+
+
+def test_generate_does_not_summarise_inline():
+    tt = _make_mind()
+    for _ in range(6):
+        tt.reply("hello", "balance")
+    assert tt.llm.complete.call_count == 6  # one call per turn, no summary call
+    tt.compact()
+    assert tt.llm.complete.call_count == 7

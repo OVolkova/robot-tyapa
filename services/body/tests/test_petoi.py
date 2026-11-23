@@ -44,9 +44,9 @@ def test_find_petoi_port_raises_when_none_found():
             "tyapa_body.petoi.serial.Serial",
             side_effect=_serial.SerialException("no device"),
         ),
+        pytest.raises(RuntimeError, match="No Petoi port found"),
     ):
-        with pytest.raises(RuntimeError, match="No Petoi port found"):
-            find_petoi_port()
+        find_petoi_port()
 
 
 def test_connect_autodiscovers_port():

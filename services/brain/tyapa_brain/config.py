@@ -1,5 +1,10 @@
 import os
 
-# Forwarded to create_llm_client. OPENAI_API_KEY must be set in the environment.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER")  # None -> "openai" default
-LLM_MODEL = os.environ.get("LLM_MODEL")  # None -> gpt-5.4-nano default
+# The only place LLM settings are read. OPENAI_API_KEY is read from the environment by the client.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "openai")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-5.4-nano")
+
+# Seconds to wait for each service's reply. Speech blocks while the dog talks, hence the long one.
+HEARING_TIMEOUT_S = 5
+SPEECH_TIMEOUT_S = 60
+BODY_TIMEOUT_S = 2

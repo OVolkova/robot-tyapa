@@ -1,0 +1,8 @@
+# Shared by every project (protocol/ and services/*): ruff uses the nearest config upwards.
+line-length = 100
+target-version = "py311"
+# every project is first-party to the others (they are installed editable side by side)
+src = ["protocol", "services/body", "services/brain", "services/hearing", "services/speech"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF", "PT"]

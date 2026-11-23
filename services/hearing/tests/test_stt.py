@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from tyapa_hearing.stt import SpeechModels, SpeechToText, get_device, resample
+from tyapa_hearing.stt import SpeechToText, Transcriber, get_device, resample
 
 _DUMMY_WAV = b"RIFF\x00\x00\x00\x00WAVEfmt "
 
@@ -58,11 +58,11 @@ def test_speech_to_text_call():
     assert result == "hello world"
 
 
-# -- SpeechModels.transcribe --
+# -- Transcriber.transcribe --
 
 
 def test_transcribe_decodes_wav_and_calls_stt():
-    models = SpeechModels.__new__(SpeechModels)
+    models = Transcriber.__new__(Transcriber)
     models.stt = MagicMock(return_value="sit down please")
 
     mock_ta = MagicMock()
