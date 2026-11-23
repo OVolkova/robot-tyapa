@@ -3,13 +3,14 @@
 import io
 import logging
 
+import numpy as np
 import scipy.signal
 import soundfile as sf
 from kokoro import KPipeline
 
 logger = logging.getLogger(__name__)
 
-KOKORO_VOICE_FREQ = 24000  # Kokoro's TTS model runs at 24kHz
+KOKORO_VOICE_FREQ = 24000  # Kokoro native sample rate
 
 
 def resample(waveform, target_freq: int, original_freq: int):
@@ -41,7 +42,7 @@ class TextToSpeech:
             split_pattern=r"\n+",
         )
 
-        original_waveform = [a for _, _, a in generator][0]
+        original_waveform = np.concatenate([a for _, _, a in generator])
         waveform = resample(
             original_waveform,
             original_freq=self.model_freq,

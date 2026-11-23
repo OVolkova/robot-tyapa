@@ -3,14 +3,15 @@ import logging
 import subprocess
 import wave
 
-from . import _suppress_stderr
-from .config import PLAYBACK_DEVICE
+from tyapa_protocol import suppress_stderr
 
 logger = logging.getLogger(__name__)
 
+_CHUNK_FRAMES = 1024
 
-def play_wav_bytes(wav_bytes: bytes, device_name: str = PLAYBACK_DEVICE) -> None:
-    """Play WAV bytes through the ALSA default device (MAX98357A amp)."""
+
+def play_wav_bytes(wav_bytes: bytes) -> None:
+    """Play on the ALSA default device (see /etc/asound.conf: softvol -> dmixer -> amp)."""
     try:
         _play_via_pyaudio(wav_bytes)
     except Exception as e:
@@ -28,7 +29,7 @@ def _play_via_pyaudio(wav_bytes: bytes) -> None:
         framerate = wf.getframerate()
         nframes = wf.getnframes()
 
-        with _suppress_stderr():
+        with suppress_stderr():
             pa = pyaudio.PyAudio()
         fmt = pa.get_format_from_width(sampwidth)
 
@@ -39,7 +40,7 @@ def _play_via_pyaudio(wav_bytes: bytes) -> None:
             rate=framerate,
             output=True,
             output_device_index=None,
-            frames_per_buffer=1024,
+            frames_per_buffer=_CHUNK_FRAMES,
         )
         try:
             logger.debug(
@@ -49,11 +50,10 @@ def _play_via_pyaudio(wav_bytes: bytes) -> None:
                 sampwidth * 8,
                 nframes,
             )
-            chunk_frames = 1024
-            data = wf.readframes(chunk_frames)
+            data = wf.readframes(_CHUNK_FRAMES)
             while data:
                 stream.write(data)
-                data = wf.readframes(chunk_frames)
+                data = wf.readframes(_CHUNK_FRAMES)
         finally:
             stream.stop_stream()
             stream.close()

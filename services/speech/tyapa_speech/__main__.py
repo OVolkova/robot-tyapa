@@ -29,7 +29,7 @@ class Speech:
         if not text:
             return m.ok(spoken_s=0)
         t0 = time.monotonic()
-        play_wav_bytes(self.models.synthesize(text), device_name=config.PLAYBACK_DEVICE)
+        play_wav_bytes(self.models.synthesize(text))
         return m.ok(spoken_s=round(time.monotonic() - t0, 2))
 
 

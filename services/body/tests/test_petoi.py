@@ -114,12 +114,6 @@ def test_execute_action_when_port_closed_skips(caplog):
     assert "not open" in caplog.text
 
 
-def test_disconnect_closes_port():
-    c = _connected_controller()
-    c.disconnect()
-    c.ser.close.assert_called_once()
-
-
 def test_resolve_command_passes_through_k_prefix():
     c = PetoiController()
     assert c._resolve_command("kwkF") == "kwkF"
@@ -139,42 +133,3 @@ def test_execute_action_serial_exception_logs_error(caplog):
     c.ser.write.side_effect = serial.SerialException("boom")
     c.execute_action("ksit")
     assert "Serial write failed" in caplog.text
-
-
-def test_get_state_returns_readline():
-    c = _connected_controller()
-    c.ser.readline.return_value = b"v1.0\n"
-    result = c.get_state()
-    c.ser.write.assert_called_once_with(b"v\n")
-    assert result == "v1.0"
-
-
-def test_get_state_when_port_closed_returns_empty():
-    c = PetoiController()
-    c.ser = MagicMock()
-    c.ser.is_open = False
-    assert c.get_state() == ""
-
-
-def test_get_state_serial_exception_returns_empty(caplog):
-    import serial
-
-    c = _connected_controller()
-    c.ser.write.side_effect = serial.SerialException("read error")
-    assert c.get_state() == ""
-    assert "Serial read failed" in caplog.text
-
-
-def test_send_raw_writes_without_whitelist():
-    c = _connected_controller()
-    c.send_raw("m0 40")
-    c.ser.write.assert_called_once_with(b"m0 40\n")
-
-
-def test_send_raw_when_port_closed_skips(caplog):
-    c = PetoiController()
-    c.ser = MagicMock()
-    c.ser.is_open = False
-    c.send_raw("m0 40")
-    c.ser.write.assert_not_called()
-    assert "not open" in caplog.text

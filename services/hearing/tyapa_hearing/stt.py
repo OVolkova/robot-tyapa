@@ -10,7 +10,7 @@ from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 logger = logging.getLogger(__name__)
 
-WHISPER_FREQUENCY = 16000
+WHISPER_FREQUENCY = 16000  # Hz expected by Whisper
 
 
 def get_device() -> str:
@@ -66,7 +66,6 @@ class SpeechModels:
         logger.info("SpeechToText ready")
 
     def transcribe(self, wav: bytes) -> str:
-        # torchaudio.load handles the WAV header.
         signal, frequency = torchaudio.load(io.BytesIO(wav))
         waveform = signal.numpy()[0]
         return self.stt(waveform, frequency)

@@ -3,8 +3,8 @@ import logging
 import wave
 
 import numpy as np
+from tyapa_protocol import suppress_stderr
 
-from . import _suppress_stderr
 from .config import (
     CHUNK_SIZE,
     RECORD_DEVICE,
@@ -53,7 +53,6 @@ def _find_input_device(pa, name: str) -> int | None:
         info = pa.get_device_info_by_index(i)
         if info["maxInputChannels"] > 0 and name in info["name"]:
             return i
-    # fallback: first available input device
     for i in range(pa.get_device_count()):
         info = pa.get_device_info_by_index(i)
         if info["maxInputChannels"] > 0:
@@ -72,12 +71,12 @@ def capture_with_vad(
     min_speech_seconds: float = VAD_MIN_SPEECH_S,
     no_speech_timeout: float = VAD_NO_SPEECH_TIMEOUT_S,
 ) -> bytes | None:
-    """Block until speech + trailing silence detected. Returns WAV bytes or None."""
+    """Block until speech ends. Returns WAV bytes, or None on no-speech timeout or too-short burst."""
     import pyaudio
     import torch
     from silero_vad import VADIterator
 
-    with _suppress_stderr():
+    with suppress_stderr():
         pa = pyaudio.PyAudio()
     device_index = _find_input_device(pa, device_name)
 

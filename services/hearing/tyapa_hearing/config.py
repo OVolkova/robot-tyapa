@@ -1,6 +1,5 @@
 # Audio hardware
 SAMPLE_RATE = 16000
-CHANNELS = 1
 CHUNK_SIZE = 1024
 RECORD_DEVICE = "mic_mono"  # ALSA alias defined in /etc/asound.conf
 
@@ -12,9 +11,7 @@ VAD_MIN_SPEECH_S = 0.3  # discard bursts shorter than this
 VAD_NO_SPEECH_TIMEOUT_S = 30  # return None if no speech detected within this window
 
 # STT — Whisper model (any HuggingFace whisper variant)
-STT_MODEL = (
-    "openai/whisper-tiny.en"  # faster; swap for "openai/whisper-base.en" for better accuracy
-)
+STT_MODEL = "openai/whisper-tiny.en"  # or whisper-base.en for accuracy
 
 # brain silent this long after a 'heard' -> re-open the mic anyway
 TURN_TIMEOUT_S = 60

@@ -19,8 +19,7 @@ RAW_OK = re.compile(r"^m\d{1,2} -?\d{1,3}( \d{1,2} -?\d{1,3})*$")
 
 
 def canonical(action: str) -> str | None:
-    """Valid skill key — every real gait/posture/trick variant is already a literal
-    PETOI_COMMANDS key, so no mirroring/derivation is needed here."""
+    """Return action if it is a known skill key, else None."""
     return action if action in PETOI_COMMANDS else None
 
 
@@ -68,7 +67,6 @@ class Body:
             "stops_in_s": round(self.stop_at - time.monotonic(), 2) if self.stop_at else None,
         }
 
-    # ── commands ──────────────────────────────────────────
     def on_act(self, msg):
         action = canonical(str(msg.get("action", "")))
         if action is None:
@@ -95,7 +93,6 @@ class Body:
     def on_state(self, msg):
         return m.ok(**self._state())
 
-    # ── watchdog, runs every TICK_MS ──────────────────────
     def tick(self):
         if self.stop_at and time.monotonic() >= self.stop_at:
             log.info("gait %s reached its time limit — stopping", self.current)

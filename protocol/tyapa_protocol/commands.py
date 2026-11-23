@@ -1,7 +1,4 @@
-"""The Petoi skill catalogue. Shared by body (validates/executes) and brain
-(builds the system prompt and the perform_action tool schema) so the two can
-never drift apart. Pure data, no imports — safe for every service's venv,
-including the camera's apt-Picamera2 one later."""
+"""Petoi skill catalogue shared by body (validate/execute) and brain (prompt, tool schema). Pure data."""
 
 PETOI_COMMANDS: dict[str, str] = {
     # ── GAITS ────────────────────────────────────────────────────────────────
@@ -9,33 +6,33 @@ PETOI_COMMANDS: dict[str, str] = {
     "bk": "Walk backward",
     "bkF": "Walk backward (forward-facing variant)",
     "bkL": "Walk backward turning left",
-    "bkR": "Walk backward turning right (mirrored from bkL)",
+    "bkR": "Walk backward turning right",
     "carpetF": "Walk forward on carpet — adapted gait for soft surfaces",
     "carpetL": "Walk left on carpet — adapted gait for soft surfaces",
-    "carpetR": "Walk right on carpet — adapted gait for soft surfaces (mirrored from carpetL)",
+    "carpetR": "Walk right on carpet — adapted gait for soft surfaces",
     "crF": "Crawl forward — slow, low-profile gait",
     "crL": "Crawl left",
-    "crR": "Crawl right (mirrored from crL)",
+    "crR": "Crawl right",
     "gpF": "Gallop forward",
     "gpL": "Gallop left",
-    "gpR": "Gallop right (mirrored from gpL)",
+    "gpR": "Gallop right",
     "hlw": "Halloween walk — seasonal themed gait",
     "jpF": "Jump/hop forward — hopping gait",
     "lftF": "Lift walk forward — high-stepping gait",
     "lftL": "Lift walk left — high-stepping gait",
-    "lftR": "Lift walk right — high-stepping gait (mirrored from lftL)",
+    "lftR": "Lift walk right — high-stepping gait",
     "phF": "Push forward — pushing gait (head down, driving forward)",
     "phL": "Push left",
-    "phR": "Push right (mirrored from phL)",
+    "phR": "Push right",
     "trF": "Trot forward — medium-speed diagonal gait",
     "trL": "Trot left",
-    "trR": "Trot right (mirrored from trL)",
+    "trR": "Trot right",
     "vtF": "Vertical step forward — stepping in place / slow march",
     "vtL": "Vertical step left",
-    "vtR": "Vertical step right (mirrored from vtL)",
+    "vtR": "Vertical step right",
     "wkF": "Walk forward — standard walking gait",
     "wkL": "Walk left",
-    "wkR": "Walk right (mirrored from wkL)",
+    "wkR": "Walk right",
     # ── POSTURES ─────────────────────────────────────────────────────────────
     "balance": "Standing balance — default neutral standing posture",
     "buttUp": "Butt up — rear raised, front lowered (play bow)",
@@ -90,10 +87,8 @@ PETOI_COMMANDS: dict[str, str] = {
     "zz": "Sleep — sleeping animation",
 }
 
-# Gaits loop until stopped and need the body service's watchdog; postures and
-# tricks are instantaneous. Derived once, here, from PETOI_COMMANDS's own
-# "GAITS" grouping above — not auto-detected, since nothing in the key names
-# alone reliably distinguishes a looping gait from a one-shot trick.
+# Gaits loop until stopped, so body arms a watchdog for them. Listed explicitly: key names alone
+# don't distinguish gaits from tricks.
 GAITS: frozenset[str] = frozenset(
     {
         "bdF",

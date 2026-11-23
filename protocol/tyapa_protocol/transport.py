@@ -33,7 +33,6 @@ class Subscriber:
             self.sock.setsockopt(zmq.SUBSCRIBE, t.encode())
 
     def recv(self, timeout_ms: int | None = None) -> dict | None:
-        """Next event, or None if nothing arrived within timeout_ms."""
         if timeout_ms is not None and not self.sock.poll(timeout_ms):
             return None
         _topic, raw = self.sock.recv_multipart()

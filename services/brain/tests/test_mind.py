@@ -10,7 +10,6 @@ from tyapa_brain.mind import (
     _MAX_HISTORY,
     PERFORM_ACTION_TOOL,
     SYSTEM_PROMPT,
-    AnthropicLLMClient,
     Mind,
     OpenAILLMClient,
     TextToText,
@@ -65,11 +64,6 @@ def test_create_llm_client_respects_env_vars(monkeypatch):
 def test_create_llm_client_unknown_provider_raises():
     with pytest.raises(ValueError, match="Unknown LLM provider"):
         create_llm_client(provider="banana", model="x", api_key="x")
-
-
-def test_create_llm_client_anthropic_raises_not_implemented():
-    with pytest.raises(NotImplementedError):
-        create_llm_client(provider="anthropic", model="x")
 
 
 # -- OpenAILLMClient ----------------------------------------------------------
@@ -141,12 +135,6 @@ def test_complete_no_tools_omits_tool_choice():
     client.complete([{"role": "user", "content": "hi"}], tools=None)
     kwargs = client.client.chat.completions.create.call_args[1]
     assert "tool_choice" not in kwargs
-
-
-def test_anthropic_complete_raises_not_implemented():
-    client = AnthropicLLMClient.__new__(AnthropicLLMClient)
-    with pytest.raises(NotImplementedError):
-        client.complete([])
 
 
 def test_complete_action_with_no_content_uses_spoken_text_from_tool():
@@ -270,7 +258,7 @@ def test_text_to_text_init():
     assert tt.history == []
 
 
-# -- Mind: thin wrapper (new code, replaces the old LocalBrain adapter) ------
+# -- Mind: thin wrapper ------
 
 
 def test_mind_reply_forwards_to_text_to_text_and_defaults_current_action():

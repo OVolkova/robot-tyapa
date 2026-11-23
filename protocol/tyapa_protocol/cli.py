@@ -1,4 +1,4 @@
-"""Poke the services by hand.   uv run python -m tyapa_protocol.cli --help   (or: just cli --help)"""
+"""Hand-poke services: just cli --help"""
 
 import argparse
 import itertools
@@ -71,13 +71,7 @@ def cmd_events(a):
 
 
 def cmd_fake_voice(a):
-    """Stand-in for hearing + speech: type instead of talking, read instead of listening.
-
-    Binds three sockets: HEARING_EVENTS (publishes what you type as speech_ended/
-    heard, like the real hearing service would) and serves both HEARING_CMD
-    (listen/hold) and SPEECH_CMD (say) so the brain's full call sequence —
-    speech.say() then hearing.listen() — works without either real service up.
-    """
+    """Fake hearing + speech: typed lines are published as speech_ended/heard; say() is printed."""
 
     def serve():
         def on_say(msg):

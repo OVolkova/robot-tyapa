@@ -58,7 +58,7 @@ def test_speech_to_text_call():
     assert result == "hello world"
 
 
-# -- SpeechModels.transcribe (new wrapper, replaces old process()'s decode step) --
+# -- SpeechModels.transcribe --
 
 
 def test_transcribe_decodes_wav_and_calls_stt():

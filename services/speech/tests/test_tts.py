@@ -45,7 +45,15 @@ def test_text_to_speech_generate():
     assert freq == 16000
 
 
-# -- SpeechModels.synthesize (new wrapper, replaces old process()'s encode step) --
+def test_generate_concatenates_all_chunks():
+    chunks = [("g", "p", np.ones(24000, dtype=np.float32)) for _ in range(2)]
+    with patch("tyapa_speech.tts.KPipeline", return_value=MagicMock(return_value=chunks)):
+        tts = TextToSpeech(playback_freq=24000)
+        waveform, _ = tts.generate("one.\ntwo.")
+    assert waveform.shape[0] == 48000
+
+
+# -- SpeechModels.synthesize --
 
 
 def test_synthesize_encodes_wav_bytes():

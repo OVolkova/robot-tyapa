@@ -22,7 +22,7 @@ class Brain:
         self.body = Client(ep.connect_addr(ep.BODY_CMD), "body", timeout_s=2)
         self.events = Subscriber(ep.connect_addr(ep.HEARING_EVENTS), "hearing")
 
-    # -- helpers: never raise, just log -- one missing service must not kill the brain --
+    # Helpers never raise: one missing service must not kill the brain.
     def act(self, action: str, duration_s: float | None = None) -> bool:
         try:
             r = self.body.call("act", action=action, duration_s=duration_s)
@@ -40,8 +40,7 @@ class Brain:
             return None
 
     def say(self, text: str, listen_after: bool = True) -> None:
-        """speech and hearing are separate services: speak first (blocking),
-        then re-open the mic ourselves."""
+        """Speak (blocking), then re-open the mic: speech and hearing are separate services."""
         try:
             if text:
                 self.speech.call("say", text=text, timeout_s=60)
@@ -50,7 +49,6 @@ class Brain:
         except (ServiceUnavailable, ProtocolError) as e:
             log.warning("%s", e)
 
-    # -- one conversational turn --
     def handle_heard(self, ev: dict) -> None:
         text = ev["text"]
         t0 = time.monotonic()
@@ -65,7 +63,7 @@ class Brain:
         )
         if action:
             self.act(action)
-        self.say(reply)  # blocks until spoken, then re-opens the mic
+        self.say(reply)
 
     def run(self) -> None:
         log.info("Tyapa online. Listening...")
@@ -82,7 +80,7 @@ class Brain:
                 self.handle_heard(ev)
             except Exception:
                 log.exception("turn failed")
-                self.say("Sorry, my brain hiccupped.")  # also re-opens the mic
+                self.say("Sorry, my brain hiccupped.")
 
 
 def main():

@@ -15,7 +15,7 @@ def _brain_with_mocks() -> Brain:
     return brain
 
 
-# -- say(): hearing and speech are now separate services, brain sequences them --
+# -- say(): speak, then re-open the mic --
 
 
 def test_say_calls_speech_then_reopens_hearing():
