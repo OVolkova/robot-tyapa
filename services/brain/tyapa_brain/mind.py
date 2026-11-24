@@ -5,15 +5,14 @@ import logging
 import os
 from abc import ABC, abstractmethod
 
-from tyapa_protocol.commands import PETOI_COMMANDS as COMMANDS
-from tyapa_protocol.commands import STAND_ACTION
+from tyapa_protocol.commands import PETOI_COMMANDS, STAND_ACTION
 
 logger = logging.getLogger(__name__)
 
 _MAX_HISTORY = 10  # messages kept before older ones are summarised
 _KEEP_RECENT = 4  # most recent messages kept verbatim when summarising
 
-_COMMANDS_SUMMARY = "\n".join(f"  {k}: {v}" for k, v in COMMANDS.items())
+_COMMANDS_SUMMARY = "\n".join(f"  {k}: {v}" for k, v in PETOI_COMMANDS.items())
 
 SYSTEM_PROMPT = (
     "You are the brain of a robot dog named Tyapa. "
@@ -51,7 +50,7 @@ PERFORM_ACTION_TOOL = {
                 },
                 "action": {
                     "type": "string",
-                    "enum": list(COMMANDS.keys()),
+                    "enum": list(PETOI_COMMANDS.keys()),
                     "description": "Skill key to execute on the robot",
                 },
             },
@@ -104,7 +103,7 @@ class OpenAILLMClient(LLMClient):
                     if not isinstance(args, dict):
                         break
                     action_key = args.get("action")
-                    if action_key not in COMMANDS:
+                    if action_key not in PETOI_COMMANDS:
                         if action_key is not None:
                             logger.warning("LLM asked for unknown action %r; ignoring", action_key)
                         action_key = None

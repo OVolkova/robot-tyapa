@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 class Hearing:
     def __init__(self):
-        self.models = Transcriber(config.STT_MODEL)
+        self.transcriber = Transcriber(
+            model_name=config.STT_MODEL, model_rate=config.STT_SAMPLE_RATE
+        )
         self.listening = threading.Event()  # set = mic open
         self.last_cmd = time.monotonic()  # last time the brain told us anything
         self.utt_ids = itertools.count(1)
@@ -51,7 +53,7 @@ class Hearing:
         utt = next(self.utt_ids)
         events.publish("hearing", m.make("speech_ended", utt=utt, t_end=t_end))
         t0 = time.monotonic()
-        text = self.models.transcribe(wav).strip()
+        text = self.transcriber.transcribe(wav).strip()
         stt_s = time.monotonic() - t0
         if not text:
             logger.info("utt %d: empty transcript, ignored", utt)

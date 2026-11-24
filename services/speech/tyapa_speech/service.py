@@ -17,11 +17,12 @@ logger = logging.getLogger(__name__)
 
 class Speech:
     def __init__(self):
-        self.models = Synthesizer(
+        self.synthesizer = Synthesizer(
             voice=config.TTS_VOICE,
             lang_code=config.TTS_LANG_CODE,
             speed=config.TTS_SPEED,
-            playback_freq=config.PLAYBACK_FREQUENCY,
+            playback_rate=config.PLAYBACK_SAMPLE_RATE,
+            model_rate=config.TTS_SAMPLE_RATE,
         )
 
     def on_say(self, msg):
@@ -29,7 +30,7 @@ class Speech:
         if not text:
             return m.ok(spoken_s=0)
         t0 = time.monotonic()
-        play_wav_bytes(self.models.synthesize(text))
+        play_wav_bytes(self.synthesizer.synthesize(text))
         return m.ok(spoken_s=round(time.monotonic() - t0, 2))
 
 

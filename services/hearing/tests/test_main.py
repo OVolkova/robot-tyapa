@@ -10,8 +10,8 @@ from tyapa_hearing.service import Hearing, main
 
 def _hearing() -> Hearing:
     h = Hearing.__new__(Hearing)
-    h.models = MagicMock()
-    h.models.transcribe.return_value = "  hello dog  "
+    h.transcriber = MagicMock()
+    h.transcriber.transcribe.return_value = "  hello dog  "
     h.listening = threading.Event()
     h.last_cmd = time.monotonic()
     h.utt_ids = itertools.count(1)
@@ -42,7 +42,7 @@ def test_capture_once_publishes_speech_ended_then_heard():
 
 def test_capture_once_empty_transcript_reopens_mic_without_heard():
     h, events = _hearing(), MagicMock()
-    h.models.transcribe.return_value = "   "
+    h.transcriber.transcribe.return_value = "   "
     h.listening.set()
     with patch("tyapa_hearing.service.capture_with_vad", return_value=b"wav"):
         h._capture_once(events)

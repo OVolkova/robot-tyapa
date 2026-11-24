@@ -1,4 +1,4 @@
-"""Kokoro TTS."""
+"""Kokoro Text-to-Speech."""
 
 import io
 import logging
@@ -10,59 +10,39 @@ from kokoro import KPipeline
 
 logger = logging.getLogger(__name__)
 
-KOKORO_VOICE_FREQ = 24000  # Kokoro native sample rate
 
-
-def resample(waveform, target_freq: int, original_freq: int):
-    if target_freq == original_freq:
+def resample(waveform, target_rate: int, original_rate: int):
+    if target_rate == original_rate:
         return waveform
-    return scipy.signal.resample(waveform, int(waveform.shape[0] * target_freq / original_freq))
+    return scipy.signal.resample(waveform, int(waveform.shape[0] * target_rate / original_rate))
 
 
-class TextToSpeech:
+class Synthesizer:
+    """Kokoro text-to-speech: text in, WAV bytes (at the playback sample rate) out."""
+
     def __init__(
         self,
         voice: str,
         lang_code: str,
         speed: float,
-        playback_freq: int,
-        model_freq: int = KOKORO_VOICE_FREQ,
+        playback_rate: int,
+        model_rate: int,
     ):
+        logger.info("Loading Kokoro (voice=%s)...", voice)
         self.voice = voice
         self.speed = speed
-        self.model_freq = model_freq
-        self.playback_freq = playback_freq
+        self.model_rate = model_rate
+        self.playback_rate = playback_rate
         self.pipeline = KPipeline(lang_code=lang_code)
-
-    def generate(self, text):
-        generator = self.pipeline(
-            text,
-            voice=self.voice,
-            speed=self.speed,
-            split_pattern=r"\n+",
-        )
-
-        original_waveform = np.concatenate([a for _, _, a in generator])
-        waveform = resample(
-            original_waveform,
-            original_freq=self.model_freq,
-            target_freq=self.playback_freq,
-        )
-        return waveform, self.playback_freq
-
-
-class Synthesizer:
-    """The speech service's model wrapper: text in, WAV bytes out."""
-
-    def __init__(self, voice: str, lang_code: str, speed: float, playback_freq: int):
-        logger.info("Loading TextToSpeech (Kokoro voice=%s)...", voice)
-        self.tts = TextToSpeech(
-            voice=voice, lang_code=lang_code, speed=speed, playback_freq=playback_freq
-        )
-        logger.info("TextToSpeech ready")
+        logger.info("Kokoro ready")
 
     def synthesize(self, text: str) -> bytes:
-        waveform, freq = self.tts.generate(text)
+        chunks = self.pipeline(text, voice=self.voice, speed=self.speed, split_pattern=r"\n+")
+        waveform = resample(
+            np.concatenate([audio for _, _, audio in chunks]),
+            original_rate=self.model_rate,
+            target_rate=self.playback_rate,
+        )
         buf = io.BytesIO()
-        sf.write(buf, waveform, freq, format="wav", subtype="PCM_16")
+        sf.write(buf, waveform, self.playback_rate, format="wav", subtype="PCM_16")
         return buf.getvalue()
